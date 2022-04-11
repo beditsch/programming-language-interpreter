@@ -101,7 +101,7 @@ Gramatyka:
 	uppercase_letter = "A" | "B" | ... | "Z"
 	letter = lowercase_letter | uppercase_letter
 	
-	integer =  "0" | (["-"], non_zero_digit, { digit })
+	integer = "0" | (["-"], non_zero_digit, { digit })
 	float =  integer, ".", digit, {digit}
 	bool = "true" | "false"
 	literal = integer | float | string | bool
@@ -129,22 +129,22 @@ Gramatyka:
 
     instruction = init_instruction | assign_instruction | return_instruction | function_call
     init_instruction = type, identifier, [assignment]
-    assign_instruction	= identifier, assignment
+    assign_instruction = identifier, assignment
     assignment = "=", expression
-    return_instruction 	= "return", expression
+    return_instruction = "return", expression
     function_call = identifier, arguments
     arguments = "(", [expression, {",", expression}], ")"
 
-	 statement  = if_statement | while_statement
+	statement = if_statement | while_statement
     if_statement = "if", "(", condition, ")", block, ["else", block]
     while_statement = "while", "(", condition, ")", block
 
     block = "{", {instruction, ";" | statement}, "}"
     parameters = "(", [[type], identifier, {",", [type], identifier}], ")"
     
-    function 		= ("void" | type), identifier, parameters, block
+    function = ("void" | type), identifier, parameters, block
    
-    program 		= {function}
+    program = {function}
 
 ## Obsługa błędów
 Błędy będą zgłaszane przez poszczególne komponenty interpretera i wyświetlane użytkownikowi. Komunikat o błędzie zawierać będzie informacje przydatne do debugowania, takie jak:
