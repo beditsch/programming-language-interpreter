@@ -4,15 +4,10 @@ import lexer.exception.LexerException
 import shared.Position
 import shared.Token
 import shared.TokenType
-import java.io.File
-import java.io.InputStreamReader
 import java.lang.StringBuilder
-import java.nio.charset.Charset
 
-class Lexer(sourceFile: File) {
-    // TODO: abstract source
-    private var sourceFileReader: InputStreamReader = sourceFile.reader(Charset.defaultCharset())
-    private var currentChar: Char? = sourceFileReader.getChar()
+class Lexer(private val source: Source) {
+    private var currentChar: Char? = source.getChar()
     private var currentPosition = Position(0, 0)
     private var currentToken: Token<*>? = null
 
@@ -83,13 +78,6 @@ class Lexer(sourceFile: File) {
     private fun getNextChar() {
         if (currentChar == '\n') currentPosition.moveLine()
         else currentPosition.moveColumn()
-        currentChar = sourceFileReader.getChar()
-    }
-}
-
-fun InputStreamReader.getChar(): Char? {
-    this.read().apply {
-        return if (this == -1) null
-        else this.toChar()
+        currentChar = source.getChar()
     }
 }
