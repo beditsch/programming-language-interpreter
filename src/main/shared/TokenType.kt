@@ -25,4 +25,24 @@ enum class TokenType(s: String? = null) {
     DIVIDE("/"),
 
     ETX;
+
+    companion object {
+        fun getOperatorDict(): Map<String, TokenType> {
+            return mapOf(
+                "==" to EQUAL,
+                "!=" to NOT_EQUAL,
+                "<" to LESS,
+                ">" to GREATER,
+                "<=" to LESS_OR_EQUAL,
+                ">=" to GREATER_OR_EQUAL,
+                "!" to NOT,
+                "&&" to AND,
+                "||" to OR,
+                "+" to ADD,
+                "-" to SUBTRACT,
+                "*" to MULTIPLY,
+                "/" to DIVIDE
+            )
+        }
+    }
 }

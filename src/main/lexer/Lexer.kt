@@ -20,8 +20,10 @@ class Lexer(sourceFile: File) {
 
     // TODO
     fun getNextToken(): Token<*>? {
+        skipWhites()
         if (tryBuildETX()) return currentToken
         if (tryBuildString()) return currentToken
+        if (tryBuildOperator()) return currentToken
         return currentToken
     }
 
@@ -47,6 +49,30 @@ class Lexer(sourceFile: File) {
             getNextChar()
             currentToken = Token(TokenType.STRING, currentPosition, tokenValueBuilder.toString())
             true
+        }
+    }
+
+    private fun tryBuildOperator(): Boolean {
+        val operatorDictionary = TokenType.getOperatorDict()
+        if (!operatorDictionary.containsKey(currentChar.toString()) && currentChar != '&' && currentChar != '|') {
+            return false
+        } else {
+            val operatorBuilder = StringBuilder()
+            operatorBuilder.append(currentChar)
+            getNextChar()
+            operatorBuilder.append(currentChar)
+            // if the operator is a two-char operator
+            if (operatorDictionary.containsKey(operatorBuilder.toString())) {
+                val operator = operatorBuilder.toString()
+                currentToken = operatorDictionary[operator]?.let { Token<Any>(it, currentPosition) }
+                    ?: throw LexerException("Unexpected character null value encountered.", currentPosition)
+                getNextChar()
+            } else {
+                val operator = operatorBuilder.substring(0, 1)
+                currentToken = operatorDictionary[operator]?.let { Token<Any>(it, currentPosition) }
+                    ?: throw LexerException("Unexpected character null value encountered.", currentPosition)
+            }
+            return true
         }
     }
 
