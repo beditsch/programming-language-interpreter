@@ -23,7 +23,7 @@ class Lexer(private val source: Source) {
         if (tryBuildOperator()) return currentToken
         if (tryBuildKeywordOrIdentifier()) return currentToken
         if (tryBuildNumber()) return currentToken
-        return currentToken
+        throw LexerException("Cannot classify token.", currentPosition)
     }
 
     private fun tryBuildETX(): Boolean {
