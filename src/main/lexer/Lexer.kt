@@ -46,7 +46,7 @@ class Lexer(private val source: Source) {
                 getNextChar()
             }
             getNextChar()
-            currentToken = Token(TokenType.STRING, currentPosition, tokenValueBuilder.toString())
+            currentToken = Token(TokenType.STRING_VAL, currentPosition, tokenValueBuilder.toString())
             true
         }
     }

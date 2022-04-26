@@ -23,6 +23,14 @@ enum class TokenType {
     MULTIPLY,
     DIVIDE,
 
+    // single sign operators
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
+    LEFT_CURLY_BRACKET,
+    RIGHT_CURLY_BRACKET,
+    SEMICOLON,
+    COMMA,
+
     // keywords
     IF,
     ELSE,
@@ -55,7 +63,13 @@ enum class TokenType {
                 "+" to ADD,
                 "-" to SUBTRACT,
                 "*" to MULTIPLY,
-                "/" to DIVIDE
+                "/" to DIVIDE,
+                "(" to LEFT_BRACKET,
+                ")" to RIGHT_BRACKET,
+                "{" to LEFT_CURLY_BRACKET,
+                "}" to RIGHT_CURLY_BRACKET,
+                ";" to SEMICOLON,
+                "," to COMMA,
             )
         }
 
