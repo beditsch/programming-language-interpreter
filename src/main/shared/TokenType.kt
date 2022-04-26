@@ -30,6 +30,7 @@ enum class TokenType {
     RIGHT_CURLY_BRACKET,
     SEMICOLON,
     COMMA,
+    ASSIGN,
 
     // keywords
     IF,
@@ -71,6 +72,7 @@ enum class TokenType {
                 "}" to RIGHT_CURLY_BRACKET,
                 ";" to SEMICOLON,
                 "," to COMMA,
+                    "=" to ASSIGN
             )
         }
 
