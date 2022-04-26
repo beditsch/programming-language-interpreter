@@ -6,6 +6,7 @@ import shared.Position
 import shared.Token
 import shared.TokenType
 import java.lang.StringBuilder
+import kotlin.math.pow
 
 class Lexer(private val source: Source) {
     private var currentChar: Char? = source.getChar()
@@ -21,6 +22,7 @@ class Lexer(private val source: Source) {
         if (tryBuildString()) return currentToken
         if (tryBuildOperator()) return currentToken
         if (tryBuildKeywordOrIdentifier()) return currentToken
+        if (tryBuildNumber()) return currentToken
         return currentToken
     }
 
@@ -90,6 +92,34 @@ class Lexer(private val source: Source) {
                 // TODO: should we distinguish currencies here or can we do it in the parser?
                 null -> Token(TokenType.IDENTIFIER, currentPosition, word)
                 else -> Token<Any>(tokenType, currentPosition)
+            }
+            return true
+        }
+    }
+
+    private fun tryBuildNumber(): Boolean {
+        if (currentChar?.isDigit() != true) return false
+        else {
+            var intPart = 0
+            if (currentChar != '0') {
+                while (currentChar?.isDigit() == true) {
+                    intPart = intPart * 10 + currentChar!!.digitToInt()
+                    getNextChar()
+                }
+            } else getNextChar()
+            if (currentChar == '.') {
+                var fractionPart = 0.0
+                var decimalPlaces = 0
+                getNextChar()
+                while (currentChar?.isDigit() == true) {
+                    fractionPart = fractionPart * 10 + currentChar!!.digitToInt()
+                    decimalPlaces++
+                    getNextChar()
+                }
+                fractionPart /= 10.0.pow(decimalPlaces)
+                currentToken = Token(TokenType.FLOAT_VAL, currentPosition, intPart + fractionPart)
+            } else {
+                currentToken = Token(TokenType.INT_VAL, currentPosition, intPart)
             }
             return true
         }
