@@ -1,4 +1,4 @@
-package lexer
+package lexer.source
 
 import java.io.File
 import java.nio.charset.Charset

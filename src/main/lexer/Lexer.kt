@@ -1,6 +1,7 @@
 package lexer
 
 import lexer.exception.LexerException
+import lexer.source.Source
 import shared.Position
 import shared.Token
 import shared.TokenType
@@ -19,6 +20,7 @@ class Lexer(private val source: Source) {
         if (tryBuildETX()) return currentToken
         if (tryBuildString()) return currentToken
         if (tryBuildOperator()) return currentToken
+        if (tryBuildKeywordOrIdentifier()) return currentToken
         return currentToken
     }
 
@@ -66,6 +68,28 @@ class Lexer(private val source: Source) {
                 val operator = operatorBuilder.substring(0, 1)
                 currentToken = operatorDictionary[operator]?.let { Token<Any>(it, currentPosition) }
                     ?: throw LexerException("Unexpected character null value encountered.", currentPosition)
+            }
+            return true
+        }
+    }
+
+    private fun tryBuildKeywordOrIdentifier(): Boolean {
+        if (currentChar?.isLetter() != true) return false
+        else {
+            val keywordsDictionary = TokenType.getKeywordsDict()
+            val wordBuilder = StringBuilder()
+            while (currentChar?.isLetterOrDigit() == true || currentChar == '_') {
+                wordBuilder.append(currentChar)
+                getNextChar()
+            }
+            val word = wordBuilder.toString()
+            val tokenType = keywordsDictionary[word]
+            currentToken = when (tokenType) {
+                TokenType.TRUE -> Token(TokenType.TRUE, currentPosition, true)
+                TokenType.FALSE -> Token(TokenType.FALSE, currentPosition, false)
+                // TODO: should we distinguish currencies here or can we do it in the parser?
+                null -> Token(TokenType.IDENTIFIER, currentPosition, word)
+                else -> Token<Any>(tokenType, currentPosition)
             }
             return true
         }

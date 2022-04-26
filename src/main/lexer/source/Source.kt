@@ -1,4 +1,4 @@
-package lexer
+package lexer.source
 
 interface Source {
     // returns:
