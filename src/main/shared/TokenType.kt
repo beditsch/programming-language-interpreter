@@ -72,7 +72,7 @@ enum class TokenType {
                 "}" to RIGHT_CURLY_BRACKET,
                 ";" to SEMICOLON,
                 "," to COMMA,
-                    "=" to ASSIGN
+                "=" to ASSIGN
             )
         }
 
