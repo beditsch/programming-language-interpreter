@@ -23,6 +23,7 @@ class Lexer(private val source: Source) {
         if (tryBuildOperator()) return currentToken
         if (tryBuildKeywordOrIdentifier()) return currentToken
         if (tryBuildNumber()) return currentToken
+        if (tryBuildComment()) return currentToken
         throw LexerException("Cannot classify token.", currentPosition)
     }
 
@@ -121,6 +122,20 @@ class Lexer(private val source: Source) {
             } else {
                 currentToken = Token(TokenType.INT_VAL, currentPosition, intPart)
             }
+            return true
+        }
+    }
+
+    private fun tryBuildComment(): Boolean {
+        if (currentChar != '#') return false
+        else {
+            val commentBuilder = StringBuilder()
+            getNextChar()
+            while (currentChar != '\n' && currentChar != null) {
+                commentBuilder.append(currentChar)
+                getNextChar()
+            }
+            currentToken = Token(TokenType.COMMENT, currentPosition, commentBuilder.toString())
             return true
         }
     }

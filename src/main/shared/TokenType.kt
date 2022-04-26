@@ -46,6 +46,7 @@ enum class TokenType {
     STRING,
 
     IDENTIFIER,
+    COMMENT,
     ETX;
 
     companion object {

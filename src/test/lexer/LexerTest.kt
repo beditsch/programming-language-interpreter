@@ -31,7 +31,8 @@ class LexerTest : WordSpec({
                 row("0.45556", TokenType.FLOAT_VAL, 0.45556),
                 row("0", TokenType.INT_VAL, 0),
                 row("12.445", TokenType.FLOAT_VAL, 12.445),
-                row("123", TokenType.INT_VAL, 123)
+                row("123", TokenType.INT_VAL, 123),
+                row("     #blabla bla \n", TokenType.COMMENT, "blabla bla ")
             ) {
                     sourceString, tokenType, tokenValue ->
                 val source = StringSource(sourceString)
