@@ -9,7 +9,7 @@ Język umożliwiający podstawowe przetwarzanie zmiennych zawierających wartoś
 - instrukcja warunkowa if/else
 - silne, statyczne typowanie
 - brak automatycznej konwersji walut, konwersje muszą być jawnie zasygnalizowane w kodzie programu
-- typy danych (waluty) definiowane przez użytkownika wraz z kursami w stosunku do waluty głównej (z kursem 1.0)
+- typy danych (waluty) definiowane przez użytkownika wraz z kursami w stosunku do waluty głównej (z kursem 1.0) - zapobiega to sytuacji, w której przejście EUR->USD->DOGECOIN->PLN da inny wynik niż EUR->PLN. W związku z tym kursy są definiowane względem jakiegoś punktu odniesienia, takiego samego dla wszystkich walut.
 - kurs wymiany walut nie zależy od rodzaju transakcji (kupno/sprzedaż)
 
 ## Przykłady użycia języka
@@ -60,7 +60,7 @@ Obliczanie rentowności inwestycji:
 	
 			USD growth_amount = growth_rate * current_investment;
 			current_investment = current_investment + growth_amount;
-			i += 1;
+			i = i + 1;
 		}
 	
 		perc_return = (current_investment - (USD) initial_investment) / initial_investment;
@@ -76,7 +76,7 @@ Przykłady skutków wymuszania jawnej konwersji:
 		USD salary_usd = (PLN) salary;
 		
 		# brak jawnej konwersji walut - błąd działania
-		PLN budget = salary + divident 
+		PLN budget = salary + dividend 
 		
 		if (salary == salary_usd) {
 			# This block will not be executed, the currencies are not the same
@@ -90,7 +90,7 @@ Przykład pliku z definicjami walut i kursów:
 	EUR 4.62
 	USD 3.97
 	BITCOIN 240000.30
-	DOGECOIN = 10.4
+	DOGECOIN 10.4
 
 ## Formalna specyfikacja i składnia
 Gramatyka:
@@ -110,25 +110,24 @@ Gramatyka:
 	relational_operator = "<" | ">" | "<=" | ">="
 	addition_operator = "+" | "-"
 	multiplication_operator = "*" | "\"
-	cast_operator = "(", type, ")"
+	cast_operator = "as", type
 	
 	identifier = letter, {"_" | letter | digit}
 	type = "int" | "float" | "string" | "bool" | currency
 	currency = uppercase_letter, {uppercase_letter}
 	
-	base_condition = ["!"], [cast_operator], expression
-	relational_condition = condition_base, [relational_operator, base_condition]
+	base_condition = ["!"], expression
+	relational_condition = base_condition, [relational_operator, base_condition]
 	comparison_condition = relational_condition, [comparison_operator, relational_condition]
 	and_condition = comparison_condition, {"&&", comparison_condition}
-	relational_condition = base_condition, [relational_operator, base_condition]
 	condition = and_condition, {"||", and_condition}
 	
 	expression = multiplication_expression, {addition_operator, multiplication_expression}
 	multiplication_expression = factor, {multiplication_operator, factor}
-	factor = function_call | "(", expression, ")" | identifier | literal)
+	factor = ["-"], (function_call | "(", expression, ")" | identifier | literal), [cast_operator]
 
-    instruction = init_instruction | assign_instruction | return_instruction | function_call
-    init_instruction = type, identifier, [assignment]
+    instruction = init_instruction | assign_instruction | return_instruction | function_call | block
+    init_instruction = type, identifier, assignment
     assign_instruction = identifier, assignment
     assignment = "=", expression
     return_instruction = "return", expression
@@ -136,7 +135,7 @@ Gramatyka:
     arguments = "(", [expression, {",", expression}], ")"
 
 	statement = if_statement | while_statement
-    if_statement = "if", "(", condition, ")", block, ["else", block]
+    if_statement = "if", "(", condition, ")", instruction, ["else", instruction]
     while_statement = "while", "(", condition, ")", block
 
     block = "{", {instruction, ";" | statement}, "}"
@@ -172,3 +171,4 @@ Do zweryfikowania poprawności działania interpretera zastosowane zostaną dwa 
 
 - **testy manualne**
 - **testy jednostkowe** sprawdzające poprawność działania głównych komponentów projektu (lekser, parser itp.) w kontekście zarówno poprawnego przetwarzania danych jak i poprawnej obsługi błędów oraz testy sprawdzające działanie całego interpretera.
+- **testy integracyjne** sprawdzające poprawne działanie całości projektu
