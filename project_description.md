@@ -94,56 +94,57 @@ Przykład pliku z definicjami walut i kursów:
 
 ## Formalna specyfikacja i składnia
 Gramatyka:
-
-	non_zero_digit = "1" | "2" | ... | "9"
-	digit = "0" | non_zero_digit
-	lowercase_letter = "a" | "b" | ... | "z"
-	uppercase_letter = "A" | "B" | ... | "Z"
-	letter = lowercase_letter | uppercase_letter
-	
-	integer = "0" | (["-"], non_zero_digit, { digit })
-	float =  integer, ".", digit, {digit}
-	bool = "true" | "false"
-	literal = integer | float | string | bool
-	
-	comparison_operator = "==" | "!="
-	relational_operator = "<" | ">" | "<=" | ">="
-	addition_operator = "+" | "-"
-	multiplication_operator = "*" | "\"
-	cast_operator = "as", type
-	
-	identifier = letter, {"_" | letter | digit}
-	type = "int" | "float" | "string" | "bool" | currency
-	currency = uppercase_letter, {uppercase_letter}
-	
-	base_condition = ["!"], expression
-	relational_condition = base_condition, [relational_operator, base_condition]
-	comparison_condition = relational_condition, [comparison_operator, relational_condition]
-	and_condition = comparison_condition, {"&&", comparison_condition}
-	condition = and_condition, {"||", and_condition}
-	
-	expression = multiplication_expression, {addition_operator, multiplication_expression}
-	multiplication_expression = factor, {multiplication_operator, factor}
-	factor = ["-"], (function_call | "(", expression, ")" | identifier | literal), [cast_operator]
-
-    instruction = init_instruction | assign_instruction | return_instruction | function_call | block
-    init_instruction = type, identifier, assignment
-    assign_instruction = identifier, assignment
-    assignment = "=", expression
-    return_instruction = "return", expression
-    function_call = identifier, arguments
-    arguments = "(", [expression, {",", expression}], ")"
-
-	statement = if_statement | while_statement
-    if_statement = "if", "(", condition, ")", instruction, ["else", instruction]
-    while_statement = "while", "(", condition, ")", block
-
-    block = "{", {instruction, ";" | statement}, "}"
-    parameters = "(", [[type], identifier, {",", [type], identifier}], ")"
     
-    function = ("void" | type), identifier, parameters, block
-   
-    program = {function}
+    program     = {function}
+
+    function    = ("void" | type), identifier, parameters, block
+    
+    parameters  = "(", [[type], identifier, {",", [type], identifier}], ")"
+    block       = "{", {instruction, ";" | statement}, "}"
+    
+    instruction         = init_instruction | assign_instruction | return_instruction | function_call | block
+    init_instruction    = type, identifier, assignment
+    assign_instruction  = identifier, assignment
+    assignment          = "=", expression
+    return_instruction  = "return", expression
+    function_call       = identifier, arguments
+    arguments           = "(", [expression, {",", expression}], ")"
+    
+    statement           = if_statement | while_statement
+    if_statement        = "if", "(", condition, ")", instruction, ["else", instruction]
+    while_statement     = "while", "(", condition, ")", block
+    
+    expression                  = multiplication_expression, {addition_operator, multiplication_expression}
+    multiplication_expression   = factor, {multiplication_operator, factor}
+    factor                      = ["-"], (function_call | "(", expression, ")" | identifier | literal), [cast_operator]
+    
+    condition               = and_condition, {"||", and_condition}
+    and_condition           = comparison_condition, {"&&", comparison_condition}
+    comparison_condition    = relational_condition, [comparison_operator, relational_condition]
+    relational_condition    = base_condition, [relational_operator, base_condition]
+    base_condition          = ["!"], expression
+    
+    identifier  = letter, {"_" | letter | digit}
+	type        = "int" | "float" | "string" | "bool" | currency
+	currency    = uppercase_letter, {uppercase_letter}
+    
+    comparison_operator     = "==" | "!="
+    relational_operator     = "<" | ">" | "<=" | ">="
+    addition_operator       = "+" | "-"
+    multiplication_operator = "*" | "\"
+    cast_operator           = "as", type
+    	
+    integer     = "0" | (["-"], non_zero_digit, { digit })
+    float       = integer, ".", digit, {digit}
+    bool        = "true" | "false"
+    literal     = integer | float | string | bool
+    	
+	non_zero_digit      = "1" | "2" | ... | "9"
+	digit               = "0" | non_zero_digit
+	lowercase_letter    = "a" | "b" | ... | "z"
+	uppercase_letter    = "A" | "B" | ... | "Z"
+	letter              = lowercase_letter | uppercase_letter
+	
 
 ## Obsługa błędów
 Błędy będą zgłaszane przez poszczególne komponenty interpretera i wyświetlane użytkownikowi. Komunikat o błędzie zawierać będzie informacje przydatne do debugowania, takie jak:
