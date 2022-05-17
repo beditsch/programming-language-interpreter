@@ -1,12 +1,12 @@
 package parser
 
 import lexer.Lexer
+import parser.exception.UnexpectedTokenException
 import parser.model.Function
 import parser.model.Parameter
 import parser.model.Program
 import shared.Token
 import shared.TokenType
-import java.lang.RuntimeException
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -26,8 +26,7 @@ class Parser(
         val functionReturnType = lexer.getTokenAndMoveToNext()
 
         if (!lexer.currentTokenIs(TokenType.IDENTIFIER))
-        // TODO: Throw meaningful exception
-            throw RuntimeException()
+            throw UnexpectedTokenException(Parser::tryParseFunction.name, listOf(TokenType.IDENTIFIER), lexer.getToken())
         val functionIdentifier = lexer.getTokenAndMoveToNext()
 
         val parameters = parseParameters()
@@ -37,7 +36,7 @@ class Parser(
     private fun parseParameters(): List<Parameter> {
         val parameters: MutableList<Parameter> = ArrayList()
         if (!lexer.currentTokenIs(TokenType.LEFT_BRACKET))
-            throw TODO()
+            throw UnexpectedTokenException(Parser::parseParameters.name, listOf(TokenType.LEFT_BRACKET), lexer.getToken())
         lexer.getNextToken()
 
         while (!lexer.currentTokenIs(TokenType.RIGHT_BRACKET)) {
@@ -57,7 +56,8 @@ class Parser(
         // if it's not a currency then it must be a simple type followed by an identifier
         else if (currentTokenIsType() && !currentTokenIsCurrency()) {
             val paramType = getTokenAndMoveToNext()
-            if (!currentTokenIs(TokenType.IDENTIFIER)) throw TODO()
+            if (!currentTokenIs(TokenType.IDENTIFIER))
+                throw UnexpectedTokenException(Parser::parseParameter.name, listOf(TokenType.IDENTIFIER), lexer.getToken())
             val paramIdentifier = getTokenAndMoveToNext()
 
             Parameter(paramType, paramIdentifier)
@@ -67,8 +67,12 @@ class Parser(
             val paramTypeOrIdentifier = getTokenAndMoveToNext()
             if (currentTokenIs(TokenType.COMMA)) Parameter(null, paramTypeOrIdentifier)
             if (currentTokenIs(TokenType.IDENTIFIER)) Parameter(paramTypeOrIdentifier, getTokenAndMoveToNext())
-            else throw TODO()
-        } else throw TODO()
+            else throw UnexpectedTokenException(Parser::parseParameter.name, listOf(TokenType.IDENTIFIER), lexer.getToken())
+        } else throw UnexpectedTokenException(
+                Parser::parseParameter.name,
+                listOf(TokenType.IDENTIFIER, TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.BOOL),
+                lexer.getToken()
+        )
     }
 }
 
