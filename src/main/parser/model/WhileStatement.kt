@@ -1,6 +1,6 @@
 package parser.model
 
 class WhileStatement(
-    private val condition: ConditionBase,
-    private val block: Block
+    val condition: ConditionBase,
+    val block: Block
 ) : Statement()

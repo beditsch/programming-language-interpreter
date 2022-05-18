@@ -3,7 +3,7 @@ package parser.model
 import shared.Token
 
 class AdditionExpression(
-    private val leftExpression: Expression,
-    private val operator: Token<*>?,
-    private val rightExpression: Expression?
+    val leftExpression: Expression,
+    val operator: Token<*>?,
+    val rightExpression: Expression?
 ) : Expression()

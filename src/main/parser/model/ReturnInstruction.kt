@@ -1,5 +1,5 @@
 package parser.model
 
 class ReturnInstruction(
-    private val returnExpression: Expression
+    val returnExpression: Expression
 ) : Instruction()

@@ -3,6 +3,6 @@ package parser.model
 import shared.Token
 
 class AssignInstruction(
-    private val identifier: Token<*>,
-    private val assignmentExpression: Expression
+    val identifier: Token<*>,
+    val assignmentExpression: Expression
 ) : Instruction()

@@ -3,7 +3,7 @@ package parser.model
 import shared.Token
 
 class Condition(
-    private val leftCond: ConditionBase,
-    private val operator: Token<*>?,
-    private val rightCond: ConditionBase?
+    val leftCond: ConditionBase,
+    val operator: Token<*>?,
+    val rightCond: ConditionBase?
 ) : ConditionBase()

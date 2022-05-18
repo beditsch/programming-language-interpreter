@@ -3,8 +3,8 @@ package parser.model
 import shared.Token
 
 class Function(
-    private val funReturnType: Token<*>,
-    private val funIdentifier: Token<*>,
-    private val parameters: List<Parameter>,
-    private val functionBlock: Block
+    val funReturnType: Token<*>,
+    val funIdentifier: Token<*>,
+    val parameters: List<Parameter>,
+    val functionBlock: Block
 )

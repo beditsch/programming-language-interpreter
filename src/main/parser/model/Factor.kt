@@ -3,10 +3,10 @@ package parser.model
 import shared.Token
 
 class Factor(
-    private val isNegated: Boolean,
-    functionCall: FunctionCall?,
-    expression: Expression?,
-    identifier: Token<*>?,
-    literal: Token<*>?,
-    shouldCastTo: Token<*>?
+    val isNegated: Boolean,
+    val functionCall: FunctionCall?,
+    val expression: Expression?,
+    val identifier: Token<*>?,
+    val literal: Token<*>?,
+    val shouldCastTo: Token<*>?
 )
