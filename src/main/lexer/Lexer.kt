@@ -15,7 +15,6 @@ class Lexer(private val source: Source) {
 
     fun getToken(): Token<*>? { return currentToken }
 
-    // TODO
     fun getNextToken(): Token<*>? {
         skipWhites()
         if (tryBuildETX()) return currentToken
@@ -37,7 +36,7 @@ class Lexer(private val source: Source) {
     private fun tryBuildString(): Boolean {
         return if (currentChar != '\"') false
         else {
-            var tokenValueBuilder = StringBuilder()
+            val tokenValueBuilder = StringBuilder()
             getNextChar()
             while (currentChar != '\"') {
                 currentChar?.apply {
