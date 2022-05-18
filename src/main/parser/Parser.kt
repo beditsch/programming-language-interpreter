@@ -228,7 +228,7 @@ class Parser(
     private fun parseCondition(): ConditionBase {
         var leftAndCondition = parseAndCondition()
         if (!lexer.currentTokenIs(TokenType.OR))
-            return Condition(leftAndCondition, null, null)
+            return leftAndCondition
 
         while (lexer.currentTokenIs(TokenType.OR)) {
             val operator = lexer.getTokenAndMoveToNext()
@@ -242,7 +242,7 @@ class Parser(
     private fun parseAndCondition(): ConditionBase {
         var leftCompCondition = parseComparisonCondition()
         if (!lexer.currentTokenIs(TokenType.AND))
-            return Condition(leftCompCondition, null, null)
+            return leftCompCondition
 
         while (lexer.currentTokenIs(TokenType.AND)) {
             val operator = lexer.getTokenAndMoveToNext()
@@ -256,7 +256,7 @@ class Parser(
     private fun parseComparisonCondition(): ConditionBase {
         val leftRelCondition = parseRelationalCondition()
         if (!lexer.currentTokenIs(listOf(TokenType.EQUAL, TokenType.NOT_EQUAL)))
-            return Condition(leftRelCondition, null, null)
+            return leftRelCondition
 
         val operator = lexer.getTokenAndMoveToNext()
         val rightRelCondition = parseRelationalCondition()
@@ -269,7 +269,7 @@ class Parser(
         if (!lexer.currentTokenIs(
                 listOf(TokenType.GREATER, TokenType.GREATER_OR_EQUAL, TokenType.LESS, TokenType.LESS_OR_EQUAL)
             )
-        ) return Condition(notCondition, null, null)
+        ) return notCondition
 
         val operator = lexer.getTokenAndMoveToNext()
         val rightConditionExpression = parseNotCondition()
