@@ -15,6 +15,9 @@ class Parser(
     private val lexer: Lexer,
     private val functions: HashMap<String, Function> = HashMap()
 ) {
+    init {
+        lexer.getNextToken()
+    }
 
     fun parse(): Program {
         while (tryParseFunction());
@@ -43,7 +46,10 @@ class Parser(
 
         while (!lexer.currentTokenIs(TokenType.RIGHT_BRACKET)) {
             parameters.add(parseParameter())
-            if (lexer.currentTokenIs(TokenType.COMMA)) lexer.getNextToken()
+            if (!lexer.currentTokenIs(listOf(TokenType.COMMA, TokenType.RIGHT_BRACKET)))
+                throw UnexpectedTokenException(Parser::parseParameters.name, listOf(TokenType.COMMA, TokenType.RIGHT_BRACKET), lexer.getToken())
+            if (lexer.currentTokenIs(TokenType.COMMA))
+                lexer.getNextToken()
         }
 
         lexer.getNextToken()
