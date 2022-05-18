@@ -1,6 +1,7 @@
 package parser
 
 import lexer.Lexer
+import parser.exception.ParsingException
 import parser.exception.UnexpectedTokenException
 import parser.model.* // ktlint-disable no-wildcard-imports
 import parser.model.Function
@@ -29,9 +30,9 @@ class Parser(
         val functionIdentifier = lexer.getTokenAndMoveToNext()
 
         val parameters = parseParameters()
-
         val block = parseBlock()
-        return TODO()
+        functions[functionIdentifier.value.toString()] = Function(functionReturnType, functionIdentifier, parameters, block)
+        return true
     }
 
     private fun parseParameters(): List<Parameter> {
@@ -77,42 +78,99 @@ class Parser(
         )
     }
 
-    private fun parseBlock(): Boolean {
+    private fun parseBlock(): Block {
         if (!lexer.currentTokenIs(TokenType.LEFT_CURLY_BRACKET))
             throw UnexpectedTokenException(Parser::parseBlock.name, listOf(TokenType.LEFT_CURLY_BRACKET), lexer.getToken())
         lexer.getNextToken()
 
-        return TODO()
+        val blockComponents: MutableList<BlockComponent> = ArrayList()
+        while (!lexer.currentTokenIs(TokenType.RIGHT_CURLY_BRACKET)) {
+            val statement = tryParseStatement()
+            if (statement != null) {
+                blockComponents.add(statement)
+                continue
+            }
+
+            val instruction = parseInstruction()
+            if (!lexer.currentTokenIs(TokenType.SEMICOLON))
+                throw UnexpectedTokenException(Parser::parseBlock.name, listOf(TokenType.SEMICOLON), lexer.getToken())
+            lexer.getNextToken()
+
+            blockComponents.add(instruction)
+        }
+        lexer.getNextToken()
+
+        return Block(blockComponents)
     }
 
-    private fun tryParseInstruction(): Instruction? {
-        return TODO()
+    private fun parseInstruction(): Instruction {
+        val assignInstrOrFunctionCallOrInitInstr = tryParseAssignInstructionOrFunctionCallOrInitInstruction()
+        if (assignInstrOrFunctionCallOrInitInstr != null) return assignInstrOrFunctionCallOrInitInstr
+
+        val returnInstruction = tryParseReturnInstruction()
+        if (returnInstruction != null) return returnInstruction
+
+        val block = parseBlock()
+        return block
     }
 
-    private fun tryParseStatement(): Boolean {
-        return TODO()
+    private fun tryParseStatement(): Statement? {
+        val ifStatement = tryParseIfStatement()
+        if (ifStatement != null) return ifStatement
+
+        val whileStatement = tryParseWhileStatement()
+        if (whileStatement != null) return whileStatement
+
+        return null
     }
 
-    private fun tryParseAssignInstructionOrFunctionCallOrInitInstruction(): Triple<AssignInstruction?, FunctionCall?, InitInstruction?> {
+    private fun tryParseIfStatement(): IfStatement? {
+        if (!lexer.currentTokenIs(TokenType.IF))
+            return null
+        lexer.getNextToken()
+
+        val condition = parseConditionInParentheses()
+        val instruction = parseInstruction()
+
+        if (!lexer.currentTokenIs(TokenType.ELSE))
+            return IfStatement(condition, instruction, null)
+        lexer.getNextToken()
+
+        val elseInstruction = parseInstruction()
+        return IfStatement(condition, instruction, elseInstruction)
+    }
+
+    private fun tryParseWhileStatement(): WhileStatement? {
+        if (!lexer.currentTokenIs(TokenType.WHILE))
+            return null
+        lexer.getNextToken()
+
+        val condition = parseCondition()
+        val block = parseBlock()
+
+        return WhileStatement(condition, block)
+    }
+
+    private fun tryParseAssignInstructionOrFunctionCallOrInitInstruction(): Instruction? {
         if (!lexer.currentTokenIs(TokenType.IDENTIFIER) && !lexer.currentTokenIsType())
-            return Triple(null, null, null)
+            return null
 
-        val identifierOrType = lexer.getToken() ?: throw TODO()
+        val identifierOrType = lexer.getToken() ?: throw ParsingException("Unexpected null token.")
         // it's an assign instr, a function call or an init with currency as a type
         if (lexer.currentTokenIs(TokenType.IDENTIFIER)) {
             lexer.getNextToken()
 
             val functionCallArguments = tryParseFunctionCallArguments()
             if (functionCallArguments != null)
-                return Triple(null, FunctionCall(identifierOrType, functionCallArguments), null)
+                return FunctionCall(identifierOrType, functionCallArguments)
 
             val assignmentExpression = tryParseAssignment()
             if (assignmentExpression != null)
-                return Triple(AssignInstruction(identifierOrType, assignmentExpression), null, null)
+                return AssignInstruction(identifierOrType, assignmentExpression)
         } else lexer.getNextToken()
 
         val initInstruction = parseRestOfInitInstruction(identifierOrType)
-        return Triple(null, null, initInstruction)
+        return initInstruction
     }
 
     private fun parseRestOfInitInstruction(typeToken: Token<*>): InitInstruction {
@@ -145,6 +203,80 @@ class Parser(
         lexer.getNextToken()
 
         return parseExpression()
+    }
+
+    private fun parseConditionInParentheses(): ConditionBase {
+        if (!lexer.currentTokenIs(TokenType.LEFT_BRACKET))
+            throw UnexpectedTokenException(Parser::parseConditionInParentheses.name, listOf(TokenType.LEFT_BRACKET), lexer.getToken())
+        lexer.getNextToken()
+
+        val condition = parseCondition()
+
+        if (!lexer.currentTokenIs(TokenType.RIGHT_BRACKET))
+            throw UnexpectedTokenException(Parser::parseConditionInParentheses.name, listOf(TokenType.RIGHT_BRACKET), lexer.getToken())
+        lexer.getNextToken()
+
+        return condition
+    }
+
+    private fun parseCondition(): ConditionBase {
+        var leftAndCondition = parseAndCondition()
+        if (!lexer.currentTokenIs(TokenType.OR))
+            return Condition(leftAndCondition, null, null)
+
+        while (lexer.currentTokenIs(TokenType.OR)) {
+            val operator = lexer.getTokenAndMoveToNext()
+            val rightCompCondition = parseAndCondition()
+            leftAndCondition = Condition(leftAndCondition, operator, rightCompCondition)
+        }
+
+        return leftAndCondition
+    }
+
+    private fun parseAndCondition(): ConditionBase {
+        var leftCompCondition = parseComparisonCondition()
+        if (!lexer.currentTokenIs(TokenType.AND))
+            return Condition(leftCompCondition, null, null)
+
+        while (lexer.currentTokenIs(TokenType.AND)) {
+            val operator = lexer.getTokenAndMoveToNext()
+            val rightCompCondition = parseComparisonCondition()
+            leftCompCondition = Condition(leftCompCondition, operator, rightCompCondition)
+        }
+
+        return leftCompCondition
+    }
+
+    private fun parseComparisonCondition(): ConditionBase {
+        val leftRelCondition = parseRelationalCondition()
+        if (!lexer.currentTokenIs(listOf(TokenType.EQUAL, TokenType.NOT_EQUAL)))
+            return Condition(leftRelCondition, null, null)
+
+        val operator = lexer.getTokenAndMoveToNext()
+        val rightRelCondition = parseRelationalCondition()
+
+        return Condition(leftRelCondition, operator, rightRelCondition)
+    }
+
+    private fun parseRelationalCondition(): ConditionBase {
+        val notCondition = parseNotCondition()
+        if (!lexer.currentTokenIs(
+                listOf(TokenType.GREATER, TokenType.GREATER_OR_EQUAL, TokenType.LESS, TokenType.LESS_OR_EQUAL)
+            )
+        ) return Condition(notCondition, null, null)
+
+        val operator = lexer.getTokenAndMoveToNext()
+        val rightConditionExpression = parseNotCondition()
+
+        return Condition(notCondition, operator, rightConditionExpression)
+    }
+
+    private fun parseNotCondition(): ConditionBase {
+        val isNegated = lexer.currentTokenIs(TokenType.NOT)
+        if (isNegated) lexer.getNextToken()
+        val expression = parseExpression()
+
+        return NotCondition(isNegated, expression)
     }
 
     private fun parseExpression(): Expression {
@@ -272,7 +404,7 @@ private fun Lexer.currentTokenIsCurrency(): Boolean {
 }
 
 private fun Lexer.getTokenAndMoveToNext(): Token<*> {
-    val currentToken = this.getToken() ?: throw TODO()
+    val currentToken = this.getToken() ?: throw ParsingException("Unexpected null token.")
     this.getNextToken()
     return currentToken
 }

@@ -1,5 +1,5 @@
 package parser.model
 
 class Block(
-    private val instrAndStatementsList: List<Any>
-)
+    private val instrAndStatementsList: List<BlockComponent>
+) : Instruction()

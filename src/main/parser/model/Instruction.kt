@@ -1,3 +1,3 @@
 package parser.model
 
-open class Instruction
+open class Instruction : BlockComponent()
