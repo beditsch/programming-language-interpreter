@@ -202,6 +202,86 @@ class ParserTest : WordSpec({
                 message shouldContain "tryParseFunctionCallArguments"
             }
         }
+
+        "parse simple program" {
+            val inputString = "int main () {\n" +
+                "\t\tPLN salary = 1000.0;\n" +
+                "\t\tUSD dividend = 12.0;\n" +
+                "\t\tUSD salary_usd = salary as PLN;\n" +
+                "\t\t\n" +
+                "\t\tPLN budget = salary + dividend; \n" +
+                "\t\t\n" +
+                "\t\tif (salary == salary_usd) {\n" +
+                "\t\t\tdo_sth();\n" +
+                "\t\t}\n" +
+                "\t}"
+
+            val program = parseFromString(inputString)
+            program.functions.size shouldBe 1
+            program.functions["main"]?.apply {
+                funReturnType.tokenType shouldBe TokenType.INT
+                funIdentifier.value shouldBe "main"
+
+                parameters.size shouldBe 0
+
+                functionBlock.instrAndStatementsList.apply {
+                    size shouldBe 5
+                    this[2].apply {
+                        this should beInstanceOf<InitInstruction>()
+                        (this as InitInstruction).apply {
+                            type.tokenType shouldBe TokenType.IDENTIFIER
+                            type.value shouldBe "USD"
+                            identifier.tokenType shouldBe TokenType.IDENTIFIER
+                            identifier.value shouldBe "salary_usd"
+                            assignmentExpression should beInstanceOf<MultiplicationExpression>()
+                            (assignmentExpression as MultiplicationExpression).apply {
+                                leftFactor.apply {
+                                    isNegated shouldBe false
+                                    functionCall shouldBe null
+                                    expression shouldBe null
+                                    identifier?.tokenType shouldBe TokenType.IDENTIFIER
+                                    identifier?.value shouldBe "salary"
+                                    shouldCastTo?.tokenType shouldBe TokenType.IDENTIFIER
+                                    shouldCastTo?.value shouldBe "PLN"
+                                }
+                                operator shouldBe null
+                                rightFactor shouldBe null
+                            }
+                        }
+                    }
+                    this[4].apply {
+                        this should beInstanceOf<IfStatement>()
+                        (this as IfStatement).apply {
+                            condition should beInstanceOf<Condition>()
+                            (condition as Condition).apply {
+                                leftCond should beInstanceOf<NotCondition>()
+                                (leftCond as NotCondition).apply {
+                                    isNegated shouldBe false
+                                    expression should beInstanceOf<MultiplicationExpression>()
+                                    (expression as MultiplicationExpression).apply {
+                                        leftFactor.identifier?.value shouldBe "salary"
+                                        rightFactor shouldBe null
+                                        operator shouldBe null
+                                    }
+                                }
+                                operator?.tokenType shouldBe TokenType.EQUAL
+                                rightCond should beInstanceOf<NotCondition>()
+                                (rightCond as NotCondition).apply {
+                                    isNegated shouldBe false
+                                    expression should beInstanceOf<MultiplicationExpression>()
+                                    (expression as MultiplicationExpression).apply {
+                                        leftFactor.identifier?.value shouldBe "salary_usd"
+                                        rightFactor shouldBe null
+                                        operator shouldBe null
+                                    }
+                                }
+                                operator?.tokenType shouldBe TokenType.EQUAL
+                            }
+                        }
+                    }
+                }
+            } shouldNotBe null
+        }
     }
 })
 
