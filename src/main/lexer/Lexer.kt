@@ -8,7 +8,10 @@ import shared.TokenType
 import java.lang.StringBuilder
 import kotlin.math.pow
 
-class Lexer(private val source: Source) {
+class Lexer(
+    private val source: Source,
+    private val currencyIdentifiers: Set<String> = emptySet()
+) {
     private var currentChar: Char? = source.getChar()
     private var currentPosition = Position(0, 0)
     private var currentToken: Token<*>? = null
@@ -20,7 +23,7 @@ class Lexer(private val source: Source) {
         if (tryBuildETX()) return currentToken
         if (tryBuildString()) return currentToken
         if (tryBuildOperator()) return currentToken
-        if (tryBuildKeywordOrIdentifier()) return currentToken
+        if (tryBuildKeywordOrIdentifierOrCurrency()) return currentToken
         if (tryBuildNumber()) return currentToken
         if (tryBuildComment()) return currentToken
         throw LexerException("Cannot classify token.", currentPosition)
@@ -75,7 +78,7 @@ class Lexer(private val source: Source) {
         }
     }
 
-    private fun tryBuildKeywordOrIdentifier(): Boolean {
+    private fun tryBuildKeywordOrIdentifierOrCurrency(): Boolean {
         if (currentChar?.isLetter() != true) return false
         else {
             val keywordsDictionary = TokenType.getKeywordsDict()
@@ -89,8 +92,8 @@ class Lexer(private val source: Source) {
             currentToken = when (tokenType) {
                 TokenType.TRUE -> Token(TokenType.TRUE, currentPosition, true)
                 TokenType.FALSE -> Token(TokenType.FALSE, currentPosition, false)
-                // TODO: should we distinguish currencies here or can we do it in the parser?
-                null -> Token(TokenType.IDENTIFIER, currentPosition, word)
+                null -> if (currencyIdentifiers.contains(word)) Token(TokenType.CURRENCY_ID, currentPosition, word)
+                else Token(TokenType.IDENTIFIER, currentPosition, word)
                 else -> Token<Any>(tokenType, currentPosition)
             }
             return true
