@@ -47,6 +47,7 @@ enum class TokenType {
     STRING,
 
     IDENTIFIER,
+    CURRENCY_ID,
     COMMENT,
     ETX;
 

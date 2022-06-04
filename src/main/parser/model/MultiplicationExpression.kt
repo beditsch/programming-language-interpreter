@@ -3,7 +3,7 @@ package parser.model
 import shared.Token
 
 class MultiplicationExpression(
-    val leftFactor: Factor,
+    val leftFactor: Expression,
     val operator: Token<*>?,
-    val rightFactor: Factor?
-) : Expression()
+    val rightFactor: Expression
+) : Expression, ProgramNode

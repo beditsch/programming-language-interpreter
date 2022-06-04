@@ -11,6 +11,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.beInstanceOf
 import lexer.Lexer
 import lexer.source.StringSource
+import parser.exception.MissingFunctionBlockException
 import parser.exception.UnexpectedTokenException
 import parser.model.* // ktlint-disable no-wildcard-imports
 import shared.TokenType
@@ -21,7 +22,7 @@ class ParserTest : WordSpec({
             val funIdentifier = "myFunction"
             val parametersWithType = "(int param1, float param2, EUR param3)"
             val funBlock = "{ return 3 + 5; }"
-            val paramTypes = listOf(TokenType.INT, TokenType.FLOAT, TokenType.IDENTIFIER)
+            val paramTypes = listOf(TokenType.INT, TokenType.FLOAT, TokenType.CURRENCY_ID)
             val paramIdentifiers = listOf("param1", "param2", "param3")
 
             forAll(
@@ -29,7 +30,7 @@ class ParserTest : WordSpec({
                 row("float", TokenType.FLOAT),
                 row("string", TokenType.STRING),
                 row("bool", TokenType.BOOL),
-                row("EUR", TokenType.IDENTIFIER)
+                row("EUR", TokenType.CURRENCY_ID)
             ) {
                     returnType, expectedTokenType ->
                 val inputString = "$returnType $funIdentifier$parametersWithType$funBlock"
@@ -39,7 +40,7 @@ class ParserTest : WordSpec({
                     functions.size shouldBe 1
                     functions[funIdentifier]?.apply {
                         this.funReturnType.tokenType shouldBe expectedTokenType
-                        this.funIdentifier.value shouldBe funIdentifier
+                        this.funIdentifier shouldBe funIdentifier
 
                         this.parameters.apply {
                             size shouldBe 3
@@ -55,8 +56,8 @@ class ParserTest : WordSpec({
                             (this[0] as ReturnInstruction).returnExpression.apply {
                                 this should beInstanceOf<AdditionExpression>()
                                 (this as AdditionExpression).apply {
-                                    (leftExpression as MultiplicationExpression).leftFactor.literal?.value shouldBe 3
-                                    (rightExpression as MultiplicationExpression).leftFactor.literal?.value shouldBe 5
+                                    (leftExpression as Factor).literal?.value shouldBe 3
+                                    (rightExpression as Factor).literal?.value shouldBe 5
                                     operator?.tokenType shouldBe TokenType.ADD
                                 }
                             }
@@ -83,7 +84,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "LEFT_BRACKET"
-                message shouldContain "parseParameters"
+                message shouldContain "tryParseFunction"
             }
         }
 
@@ -93,7 +94,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "IDENTIFIER"
-                message shouldContain "parseParameter"
+                message shouldContain "tryParseParameter"
             }
         }
 
@@ -102,9 +103,9 @@ class ParserTest : WordSpec({
             shouldThrow<UnexpectedTokenException> {
                 parseFromString(inputString)
             }.apply {
-                message shouldContain "COMMA"
+                message shouldContain "IDENTIFIER"
                 message shouldContain "RIGHT_BRACKET"
-                message shouldContain "parseParameters"
+                message shouldContain "tryParseFunction"
             }
         }
 
@@ -113,19 +114,18 @@ class ParserTest : WordSpec({
             shouldThrow<UnexpectedTokenException> {
                 parseFromString(inputString)
             }.apply {
-                message shouldContain "COMMA"
+                message shouldContain "IDENTIFIER"
                 message shouldContain "RIGHT_BRACKET"
-                message shouldContain "parseParameters"
+                message shouldContain "tryParseFunction"
             }
         }
 
-        "throw ${UnexpectedTokenException::class.java.simpleName} when function has no body" {
+        "throw ${MissingFunctionBlockException::class.java.simpleName} when function has no body" {
             val inputString = "void myFunc(int param1, float param2) void myFunc"
-            shouldThrow<UnexpectedTokenException> {
+            shouldThrow<MissingFunctionBlockException> {
                 parseFromString(inputString)
             }.apply {
-                message shouldContain "LEFT_CURLY_BRACKET"
-                message shouldContain "parseBlock"
+                message shouldContain "myFunc"
             }
         }
 
@@ -135,7 +135,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "SEMICOLON"
-                message shouldContain "parseBlock"
+                message shouldContain "tryParseBlock"
             }
         }
 
@@ -145,7 +145,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "ASSIGN"
-                message shouldContain "parseRestOfInitInstruction"
+                message shouldContain "tryParseInitInstruction"
             }
         }
 
@@ -155,7 +155,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "LEFT_BRACKET"
-                message shouldContain "parseConditionInParentheses"
+                message shouldContain "tryParseIfStatement"
             }
         }
 
@@ -165,7 +165,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "RIGHT_BRACKET"
-                message shouldContain "parseConditionInParentheses"
+                message shouldContain "tryParseConditionInParentheses"
             }
         }
 
@@ -175,7 +175,7 @@ class ParserTest : WordSpec({
                 parseFromString(inputString)
             }.apply {
                 message shouldContain "RIGHT_BRACKET"
-                message shouldContain "parseFactor"
+                message shouldContain "tryParseConditionInParentheses"
             }
         }
 
@@ -198,7 +198,7 @@ class ParserTest : WordSpec({
             shouldThrow<UnexpectedTokenException> {
                 parseFromString(inputString)
             }.apply {
-                message shouldContain "COMMA"
+                message shouldContain "RIGHT_BRACKET"
                 message shouldContain "tryParseFunctionCallArguments"
             }
         }
@@ -220,7 +220,7 @@ class ParserTest : WordSpec({
             program.functions.size shouldBe 1
             program.functions["main"]?.apply {
                 funReturnType.tokenType shouldBe TokenType.INT
-                funIdentifier.value shouldBe "main"
+                funIdentifier shouldBe "main"
 
                 parameters.size shouldBe 0
 
@@ -229,23 +229,19 @@ class ParserTest : WordSpec({
                     this[2].apply {
                         this should beInstanceOf<InitInstruction>()
                         (this as InitInstruction).apply {
-                            type.tokenType shouldBe TokenType.IDENTIFIER
+                            type.tokenType shouldBe TokenType.CURRENCY_ID
                             type.value shouldBe "USD"
                             identifier.tokenType shouldBe TokenType.IDENTIFIER
                             identifier.value shouldBe "salary_usd"
-                            assignmentExpression should beInstanceOf<MultiplicationExpression>()
-                            (assignmentExpression as MultiplicationExpression).apply {
-                                leftFactor.apply {
-                                    isNegated shouldBe false
-                                    functionCall shouldBe null
-                                    expression shouldBe null
-                                    identifier?.tokenType shouldBe TokenType.IDENTIFIER
-                                    identifier?.value shouldBe "salary"
-                                    shouldCastTo?.tokenType shouldBe TokenType.IDENTIFIER
-                                    shouldCastTo?.value shouldBe "PLN"
-                                }
-                                operator shouldBe null
-                                rightFactor shouldBe null
+                            assignmentExpression should beInstanceOf<Factor>()
+                            (assignmentExpression as Factor).apply {
+                                isNegated shouldBe false
+                                functionCall shouldBe null
+                                expression shouldBe null
+                                identifier?.tokenType shouldBe TokenType.IDENTIFIER
+                                identifier?.value shouldBe "salary"
+                                shouldCastTo?.tokenType shouldBe TokenType.CURRENCY_ID
+                                shouldCastTo?.value shouldBe "PLN"
                             }
                         }
                     }
@@ -254,28 +250,15 @@ class ParserTest : WordSpec({
                         (this as IfStatement).apply {
                             condition should beInstanceOf<Condition>()
                             (condition as Condition).apply {
-                                leftCond should beInstanceOf<NotCondition>()
-                                (leftCond as NotCondition).apply {
-                                    isNegated shouldBe false
-                                    expression should beInstanceOf<MultiplicationExpression>()
-                                    (expression as MultiplicationExpression).apply {
-                                        leftFactor.identifier?.value shouldBe "salary"
-                                        rightFactor shouldBe null
-                                        operator shouldBe null
-                                    }
+                                leftCond should beInstanceOf<Factor>()
+                                (leftCond as Factor).apply {
+                                    identifier?.value shouldBe "salary"
                                 }
                                 operator?.tokenType shouldBe TokenType.EQUAL
-                                rightCond should beInstanceOf<NotCondition>()
-                                (rightCond as NotCondition).apply {
-                                    isNegated shouldBe false
-                                    expression should beInstanceOf<MultiplicationExpression>()
-                                    (expression as MultiplicationExpression).apply {
-                                        leftFactor.identifier?.value shouldBe "salary_usd"
-                                        rightFactor shouldBe null
-                                        operator shouldBe null
-                                    }
+                                rightCond should beInstanceOf<Factor>()
+                                (rightCond as Factor).apply {
+                                    identifier?.value shouldBe "salary_usd"
                                 }
-                                operator?.tokenType shouldBe TokenType.EQUAL
                             }
                         }
                     }
@@ -288,7 +271,8 @@ class ParserTest : WordSpec({
 private fun parseFromString(inputString: String): Program {
     val source = StringSource(inputString)
 
-    val lexer = Lexer(source)
+    val currencyIdSet = setOf<String>("PLN", "USD", "EUR")
+    val lexer = Lexer(source, currencyIdSet)
     val parser = Parser(lexer)
 
     return parser.parse()

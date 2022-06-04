@@ -9,4 +9,4 @@ class Factor(
     val identifier: Token<*>?,
     val literal: Token<*>?,
     val shouldCastTo: Token<*>?
-)
+) : Expression
