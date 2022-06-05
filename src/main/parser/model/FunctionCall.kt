@@ -1,8 +1,6 @@
 package parser.model
 
-import shared.Token
-
 class FunctionCall(
-    val identifier: Token<*>,
+    val identifier: String,
     val arguments: List<Expression>
-) : Expression, ProgramNode, Instruction()
+) : Expression, Statement, ProgramNode

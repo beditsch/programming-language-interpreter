@@ -6,7 +6,9 @@ class Factor(
     val isNegated: Boolean,
     val functionCall: FunctionCall?,
     val expression: Expression?,
-    val identifier: Token<*>?,
+    val identifier: String?,
+    // TODO
     val literal: Token<*>?,
+    // TODO
     val shouldCastTo: Token<*>?
-) : Expression
+) : Expression, ProgramNode

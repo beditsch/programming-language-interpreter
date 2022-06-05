@@ -4,6 +4,11 @@ import lexer.Lexer
 import parser.exception.* // ktlint-disable no-wildcard-imports
 import parser.model.* // ktlint-disable no-wildcard-imports
 import parser.model.Function
+import parser.model.arithmetic.AdditionExpression
+import parser.model.arithmetic.DivisionExpression
+import parser.model.arithmetic.MultiplicationExpression
+import parser.model.arithmetic.SubtractionExpression
+import parser.model.condition.* // ktlint-disable no-wildcard-imports
 import shared.Token
 import shared.TokenType
 import kotlin.collections.ArrayList
@@ -13,6 +18,21 @@ class Parser(
     private val lexer: Lexer,
     private val functions: HashMap<String, Function> = HashMap()
 ) {
+    companion object {
+        val tokenTypeToExpressionConstructorMap = hashMapOf<TokenType, (Expression, Expression) -> Expression>(
+            TokenType.NOT_EQUAL to ::NotEqualCondition,
+            TokenType.EQUAL to ::EqualCondition,
+            TokenType.GREATER to ::GreaterCondition,
+            TokenType.GREATER_OR_EQUAL to ::GreaterOrEqualCondition,
+            TokenType.LESS to ::LessCondition,
+            TokenType.LESS_OR_EQUAL to ::LessOrEqualCondition,
+            TokenType.ADD to ::AdditionExpression,
+            TokenType.SUBTRACT to ::SubtractionExpression,
+            TokenType.MULTIPLY to ::MultiplicationExpression,
+            TokenType.DIVIDE to ::DivisionExpression,
+        )
+    }
+
     init {
         lexer.getNextToken()
     }
@@ -67,13 +87,13 @@ class Parser(
             return null
 
         return if (currentTokenIs(TokenType.IDENTIFIER)) {
-            val paramIdentifier = getTokenAndMoveToNext()
+            val paramIdentifier = getTokenAndMoveToNext().value.toString()
             Parameter(null, paramIdentifier)
         } else {
             val paramType = getTokenAndMoveToNext()
             if (!currentTokenIs(TokenType.IDENTIFIER))
                 throw UnexpectedTokenException(Parser::tryParseParameter.name, listOf(TokenType.IDENTIFIER), lexer.getToken())
-            val paramIdentifier = getTokenAndMoveToNext()
+            val paramIdentifier = getTokenAndMoveToNext().value.toString()
 
             Parameter(paramType, paramIdentifier)
         }
@@ -83,8 +103,8 @@ class Parser(
         if (!lexer.consumeIfCurrentTokenIs(TokenType.LEFT_CURLY_BRACKET))
             return null
 
-        val blockComponents: MutableList<BlockComponent> = ArrayList()
-        var instruction: Instruction? = tryParseInstruction()
+        val blockComponents: MutableList<Statement> = ArrayList()
+        var instruction: Statement? = tryParseInstruction()
         var statement: Statement? = if (instruction == null) tryParseStatement() else null
 
         while (instruction != null || statement != null) {
@@ -107,7 +127,7 @@ class Parser(
         return Block(blockComponents)
     }
 
-    private fun tryParseInstruction(): Instruction? {
+    private fun tryParseInstruction(): Statement? {
         val assignInstrOrFunctionCallOrInitInstr = tryParseAssignInstructionOrFunctionCall()
         if (assignInstrOrFunctionCallOrInitInstr != null) return assignInstrOrFunctionCallOrInitInstr
 
@@ -160,7 +180,7 @@ class Parser(
         return WhileStatement(condition, block)
     }
 
-    private fun tryParseInitInstruction(): Instruction? {
+    private fun tryParseInitInstruction(): Statement? {
         if (!lexer.currentTokenIsType())
             return null
 
@@ -171,7 +191,7 @@ class Parser(
                 listOf(TokenType.IDENTIFIER),
                 lexer.getToken()
             )
-        val identifier = lexer.getTokenAndMoveToNext()
+        val identifier = lexer.getTokenAndMoveToNext().value.toString()
         val assignmentExpr = tryParseAssignment()
             ?: throw UnexpectedTokenException(
                 Parser::tryParseInitInstruction.name,
@@ -181,11 +201,11 @@ class Parser(
         return InitInstruction(type, identifier, assignmentExpr)
     }
 
-    private fun tryParseAssignInstructionOrFunctionCall(): Instruction? {
+    private fun tryParseAssignInstructionOrFunctionCall(): Statement? {
         if (!lexer.currentTokenIs(TokenType.IDENTIFIER))
             return null
 
-        val identifier = lexer.getTokenAndMoveToNext()
+        val identifier = lexer.getTokenAndMoveToNext().value.toString()
         val functionCallArguments = tryParseFunctionCallArguments()
         if (functionCallArguments != null)
             return FunctionCall(identifier, functionCallArguments)
@@ -207,10 +227,9 @@ class Parser(
 
     private fun tryParseAssignment(): Expression? {
         if (!lexer.consumeIfCurrentTokenIs(TokenType.ASSIGN)) return null
-        val expression = tryParseExpression()
-            ?: throw MissingExpressionException(Parser::tryParseAssignment.name, lexer.getToken()?.position)
 
-        return expression
+        return tryParseExpression()
+            ?: throw MissingExpressionException(Parser::tryParseAssignment.name, lexer.getToken()?.position)
     }
 
     private fun tryParseConditionInParentheses(): Expression? {
@@ -227,47 +246,44 @@ class Parser(
     }
 
     private fun tryParseCondition(): Expression? {
-        var leftAndCondition = tryParseAndCondition() ?: return null
+        var leftCondition = tryParseAndCondition() ?: return null
 
-        while (lexer.currentTokenIs(TokenType.OR)) {
-            val operator = lexer.getTokenAndMoveToNext()
-            val rightCompCondition = tryParseAndCondition()
+        while (lexer.consumeIfCurrentTokenIs(TokenType.OR)) {
+            val rightCondition = tryParseAndCondition()
                 ?: throw MissingConditionException(Parser::tryParseCondition.name, lexer.getToken()?.position)
-            leftAndCondition = Condition(leftAndCondition, operator, rightCompCondition)
+            leftCondition = OrCondition(leftCondition, rightCondition)
         }
 
-        return leftAndCondition
+        return leftCondition
     }
 
     private fun tryParseAndCondition(): Expression? {
-        var leftCompCondition = tryParseComparisonCondition() ?: return null
+        var leftCondition = tryParseComparisonCondition() ?: return null
 
-        while (lexer.currentTokenIs(TokenType.AND)) {
-            val operator = lexer.getTokenAndMoveToNext()
-            val rightCompCondition = tryParseComparisonCondition()
+        while (lexer.consumeIfCurrentTokenIs(TokenType.AND)) {
+            val rightCondition = tryParseComparisonCondition()
                 ?: throw MissingConditionException(Parser::tryParseAndCondition.name, lexer.getToken()?.position)
-            leftCompCondition = Condition(leftCompCondition, operator, rightCompCondition)
+            leftCondition = AndCondition(leftCondition, rightCondition)
         }
 
-        return leftCompCondition
+        return leftCondition
     }
 
     private fun tryParseComparisonCondition(): Expression? {
         val leftRelCondition = tryParseRelationalCondition() ?: return null
-        // TODO: mapa mapująca token type na konstruktor klasy
         if (!lexer.currentTokenIs(listOf(TokenType.EQUAL, TokenType.NOT_EQUAL)))
             return leftRelCondition
 
         val operator = lexer.getTokenAndMoveToNext()
         val rightRelCondition = tryParseRelationalCondition()
-            ?: throw MissingConditionException(Parser::tryParseRelationalCondition.name, lexer.getToken()?.position)
+            ?: throw MissingConditionException(Parser::tryParseComparisonCondition.name, lexer.getToken()?.position)
 
-        return Condition(leftRelCondition, operator, rightRelCondition)
+        return tokenTypeToExpressionConstructorMap[operator.tokenType]?.let { it(leftRelCondition, rightRelCondition) }
+            ?: throw MissingExpressionConstructorForTokenTypeException(operator.tokenType.toString())
     }
 
     private fun tryParseRelationalCondition(): Expression? {
         val notCondition = tryParseNotCondition() ?: return null
-        // TODO: można zrobić mapkę jak powyżej
         if (!lexer.currentTokenIs(
                 listOf(TokenType.GREATER, TokenType.GREATER_OR_EQUAL, TokenType.LESS, TokenType.LESS_OR_EQUAL)
             )
@@ -275,8 +291,10 @@ class Parser(
 
         val operator = lexer.getTokenAndMoveToNext()
         val rightConditionExpression = tryParseNotCondition()
+            ?: throw MissingConditionException(Parser::tryParseRelationalCondition.name, lexer.getToken()?.position)
 
-        return Condition(notCondition, operator, rightConditionExpression)
+        return tokenTypeToExpressionConstructorMap[operator.tokenType]?.let { it(notCondition, rightConditionExpression) }
+            ?: throw MissingExpressionConstructorForTokenTypeException(operator.tokenType.toString())
     }
 
     private fun tryParseNotCondition(): Expression? {
@@ -286,7 +304,7 @@ class Parser(
                 throw MissingExpressionException(Parser::tryParseNotCondition.name, lexer.getToken()?.position)
             else return null
 
-        return if (isNegated) NotCondition(isNegated, expression) else expression
+        return if (isNegated) NotCondition(expression) else expression
     }
 
     private fun tryParseExpression(): Expression? {
@@ -298,7 +316,8 @@ class Parser(
             operator = lexer.getTokenAndMoveToNext()
             rightExpression = tryParseMultiplicationExpression()
                 ?: throw MissingExpressionException(Parser::tryParseExpression.name, lexer.getToken()?.position)
-            val expression = AdditionExpression(leftExpression, operator, rightExpression)
+            val expression = tokenTypeToExpressionConstructorMap[operator.tokenType]?.let { it(leftExpression, rightExpression) }
+                ?: throw MissingExpressionConstructorForTokenTypeException(operator.tokenType.toString())
             leftExpression = expression
         }
 
@@ -314,7 +333,8 @@ class Parser(
             operator = lexer.getTokenAndMoveToNext()
             rightFactor = parseFactor()
                 ?: throw MissingExpressionException(Parser::tryParseMultiplicationExpression.name, lexer.getToken()?.position)
-            val expression = MultiplicationExpression(leftFactor, operator, rightFactor)
+            val expression = tokenTypeToExpressionConstructorMap[operator.tokenType]?.let { it(leftFactor, rightFactor) }
+                ?: throw MissingExpressionConstructorForTokenTypeException(operator.tokenType.toString())
             leftFactor = expression
         }
 
@@ -363,11 +383,11 @@ class Parser(
         else null
     }
 
-    private fun tryParseIdentifierOrFunctionCall(): Pair<Token<*>?, FunctionCall?> {
+    private fun tryParseIdentifierOrFunctionCall(): Pair<String?, FunctionCall?> {
         if (!lexer.currentTokenIs(TokenType.IDENTIFIER))
             return Pair(null, null)
 
-        val identifier = lexer.getTokenAndMoveToNext()
+        val identifier = lexer.getTokenAndMoveToNext().value.toString()
         val functionArguments = tryParseFunctionCallArguments()
 
         return if (functionArguments == null) Pair(identifier, null)
@@ -409,13 +429,6 @@ private fun Lexer.consumeIfCurrentTokenIs(tokenType: TokenType): Boolean {
 
 private fun Lexer.currentTokenIs(tokenTypes: List<TokenType>): Boolean =
     tokenTypes.contains(this.getToken()?.tokenType)
-
-private fun Lexer.consumeIfCurrentTokenIs(tokenTypes: List<TokenType>): Boolean {
-    return if (currentTokenIs(tokenTypes)) {
-        getNextToken()
-        true
-    } else false
-}
 
 private fun Lexer.currentTokenIsFunctionReturnType(): Boolean =
     currentTokenIsType() || currentTokenIs(TokenType.VOID)

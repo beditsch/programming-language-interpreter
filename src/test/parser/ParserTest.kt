@@ -14,6 +14,8 @@ import lexer.source.StringSource
 import parser.exception.MissingFunctionBlockException
 import parser.exception.UnexpectedTokenException
 import parser.model.* // ktlint-disable no-wildcard-imports
+import parser.model.arithmetic.AdditionExpression
+import parser.model.condition.EqualCondition
 import shared.TokenType
 
 class ParserTest : WordSpec({
@@ -45,7 +47,7 @@ class ParserTest : WordSpec({
                         this.parameters.apply {
                             size shouldBe 3
                             this.mapIndexed { id, param ->
-                                param.parameterIdentifier.value shouldBe paramIdentifiers[id]
+                                param.parameterIdentifier shouldBe paramIdentifiers[id]
                                 param.parameterType?.tokenType shouldBe paramTypes[id]
                             }
                         }
@@ -58,7 +60,6 @@ class ParserTest : WordSpec({
                                 (this as AdditionExpression).apply {
                                     (leftExpression as Factor).literal?.value shouldBe 3
                                     (rightExpression as Factor).literal?.value shouldBe 5
-                                    operator?.tokenType shouldBe TokenType.ADD
                                 }
                             }
                         } shouldNotBe null
@@ -231,15 +232,13 @@ class ParserTest : WordSpec({
                         (this as InitInstruction).apply {
                             type.tokenType shouldBe TokenType.CURRENCY_ID
                             type.value shouldBe "USD"
-                            identifier.tokenType shouldBe TokenType.IDENTIFIER
-                            identifier.value shouldBe "salary_usd"
+                            identifier shouldBe "salary_usd"
                             assignmentExpression should beInstanceOf<Factor>()
                             (assignmentExpression as Factor).apply {
                                 isNegated shouldBe false
                                 functionCall shouldBe null
                                 expression shouldBe null
-                                identifier?.tokenType shouldBe TokenType.IDENTIFIER
-                                identifier?.value shouldBe "salary"
+                                identifier shouldBe "salary"
                                 shouldCastTo?.tokenType shouldBe TokenType.CURRENCY_ID
                                 shouldCastTo?.value shouldBe "PLN"
                             }
@@ -248,16 +247,15 @@ class ParserTest : WordSpec({
                     this[4].apply {
                         this should beInstanceOf<IfStatement>()
                         (this as IfStatement).apply {
-                            condition should beInstanceOf<Condition>()
-                            (condition as Condition).apply {
+                            condition should beInstanceOf<EqualCondition>()
+                            (condition as EqualCondition).apply {
                                 leftCond should beInstanceOf<Factor>()
                                 (leftCond as Factor).apply {
-                                    identifier?.value shouldBe "salary"
+                                    identifier shouldBe "salary"
                                 }
-                                operator?.tokenType shouldBe TokenType.EQUAL
                                 rightCond should beInstanceOf<Factor>()
                                 (rightCond as Factor).apply {
-                                    identifier?.value shouldBe "salary_usd"
+                                    identifier shouldBe "salary_usd"
                                 }
                             }
                         }

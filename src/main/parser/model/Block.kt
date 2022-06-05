@@ -1,5 +1,5 @@
 package parser.model
 
 class Block(
-    val instrAndStatementsList: List<BlockComponent>
-) : Instruction()
+    val instrAndStatementsList: List<Statement>
+) : Statement, ProgramNode

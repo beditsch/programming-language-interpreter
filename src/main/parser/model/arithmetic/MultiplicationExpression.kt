@@ -1,9 +1,9 @@
-package parser.model
+package parser.model.arithmetic
 
-import shared.Token
+import parser.model.Expression
+import parser.model.ProgramNode
 
 class MultiplicationExpression(
     val leftFactor: Expression,
-    val operator: Token<*>?,
     val rightFactor: Expression
 ) : Expression, ProgramNode

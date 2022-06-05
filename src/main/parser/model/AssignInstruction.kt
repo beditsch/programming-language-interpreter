@@ -1,8 +1,6 @@
 package parser.model
 
-import shared.Token
-
 class AssignInstruction(
-    val identifier: Token<*>,
+    val identifier: String,
     val assignmentExpression: Expression
-) : Instruction()
+) : Statement, ProgramNode

@@ -2,6 +2,6 @@ package parser.model
 
 class IfStatement(
     val condition: Expression,
-    val instruction: Instruction,
-    val elseInstruction: Instruction?
-) : Statement()
+    val instruction: Statement,
+    val elseInstruction: Statement?
+) : Statement, ProgramNode
