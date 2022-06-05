@@ -64,7 +64,7 @@ class Parser(
         if (functions.containsKey(functionIdentifier))
             throw DuplicateFunctionDefinitionException(functionIdentifier, functionIdentifierToken.position)
 
-        functions[functionIdentifier] = Function(functionReturnType, functionIdentifier, parameters, block)
+        functions[functionIdentifier] = Function(VariableType(functionReturnType), functionIdentifier, parameters, block)
         return true
     }
 
@@ -95,7 +95,7 @@ class Parser(
                 throw UnexpectedTokenException(Parser::tryParseParameter.name, listOf(TokenType.IDENTIFIER), lexer.getToken())
             val paramIdentifier = getTokenAndMoveToNext().value.toString()
 
-            Parameter(paramType, paramIdentifier)
+            Parameter(VariableType(paramType), paramIdentifier)
         }
     }
 
@@ -198,7 +198,7 @@ class Parser(
                 listOf(TokenType.ASSIGN),
                 lexer.getToken()
             )
-        return InitInstruction(type, identifier, assignmentExpr)
+        return InitInstruction(VariableType(type), identifier, assignmentExpr)
     }
 
     private fun tryParseAssignInstructionOrFunctionCall(): Statement? {
@@ -346,18 +346,18 @@ class Parser(
 
         val conditionInParenth = tryParseConditionInParentheses()
         if (conditionInParenth != null)
-            return Factor(isFactorNegated, null, conditionInParenth, null, null, tryParseCast())
+            return Factor(isFactorNegated, null, conditionInParenth, null, null, tryParseCast()?.let { VariableType(it) })
 
         val literal = tryParseLiteral()
         if (literal != null) {
-            return Factor(isFactorNegated, null, null, null, literal, tryParseCast())
+            return Factor(isFactorNegated, null, null, null, literal.value, tryParseCast()?.let { VariableType(it) })
         }
 
         val (identifier, functionCall) = tryParseIdentifierOrFunctionCall()
         if (identifier != null)
-            return Factor(isFactorNegated, null, null, identifier, null, tryParseCast())
+            return Factor(isFactorNegated, null, null, identifier, null, tryParseCast()?.let { VariableType(it) })
         if (functionCall != null)
-            return Factor(isFactorNegated, functionCall, null, null, null, tryParseCast())
+            return Factor(isFactorNegated, functionCall, null, null, null, tryParseCast()?.let { VariableType(it) })
 
         if (isFactorNegated)
             throw MissingExpressionException(Parser::parseFactor.name, lexer.getToken()?.position)

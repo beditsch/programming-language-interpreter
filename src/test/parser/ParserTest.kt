@@ -16,7 +16,6 @@ import parser.exception.UnexpectedTokenException
 import parser.model.* // ktlint-disable no-wildcard-imports
 import parser.model.arithmetic.AdditionExpression
 import parser.model.condition.EqualCondition
-import shared.TokenType
 
 class ParserTest : WordSpec({
     Parser::class.java.simpleName should {
@@ -24,15 +23,16 @@ class ParserTest : WordSpec({
             val funIdentifier = "myFunction"
             val parametersWithType = "(int param1, float param2, EUR param3)"
             val funBlock = "{ return 3 + 5; }"
-            val paramTypes = listOf(TokenType.INT, TokenType.FLOAT, TokenType.CURRENCY_ID)
+            val paramTypes = listOf(Type.INT, Type.FLOAT, Type.CURRENCY)
             val paramIdentifiers = listOf("param1", "param2", "param3")
+            val paramCurrencyIds = listOf(null, null, "EUR")
 
             forAll(
-                row("int", TokenType.INT),
-                row("float", TokenType.FLOAT),
-                row("string", TokenType.STRING),
-                row("bool", TokenType.BOOL),
-                row("EUR", TokenType.CURRENCY_ID)
+                row("int", Type.INT),
+                row("float", Type.FLOAT),
+                row("string", Type.STRING),
+                row("bool", Type.BOOL),
+                row("EUR", Type.CURRENCY)
             ) {
                     returnType, expectedTokenType ->
                 val inputString = "$returnType $funIdentifier$parametersWithType$funBlock"
@@ -41,14 +41,15 @@ class ParserTest : WordSpec({
                 program.apply {
                     functions.size shouldBe 1
                     functions[funIdentifier]?.apply {
-                        this.funReturnType.tokenType shouldBe expectedTokenType
+                        this.funReturnType.type shouldBe expectedTokenType
                         this.funIdentifier shouldBe funIdentifier
 
                         this.parameters.apply {
                             size shouldBe 3
                             this.mapIndexed { id, param ->
                                 param.parameterIdentifier shouldBe paramIdentifiers[id]
-                                param.parameterType?.tokenType shouldBe paramTypes[id]
+                                param.parameterType?.type shouldBe paramTypes[id]
+                                param.parameterType?.currencyId shouldBe paramCurrencyIds[id]
                             }
                         }
 
@@ -58,8 +59,14 @@ class ParserTest : WordSpec({
                             (this[0] as ReturnInstruction).returnExpression.apply {
                                 this should beInstanceOf<AdditionExpression>()
                                 (this as AdditionExpression).apply {
-                                    (leftExpression as Factor).literal?.value shouldBe 3
-                                    (rightExpression as Factor).literal?.value shouldBe 5
+                                    (leftExpression as Factor<*>).literal.apply {
+                                        this should beInstanceOf<Int>()
+                                        this shouldBe 3
+                                    }
+                                    (rightExpression as Factor<*>).literal.apply {
+                                        this should beInstanceOf<Int>()
+                                        this shouldBe 5
+                                    }
                                 }
                             }
                         } shouldNotBe null
@@ -220,7 +227,7 @@ class ParserTest : WordSpec({
             val program = parseFromString(inputString)
             program.functions.size shouldBe 1
             program.functions["main"]?.apply {
-                funReturnType.tokenType shouldBe TokenType.INT
+                funReturnType.type shouldBe Type.INT
                 funIdentifier shouldBe "main"
 
                 parameters.size shouldBe 0
@@ -230,17 +237,17 @@ class ParserTest : WordSpec({
                     this[2].apply {
                         this should beInstanceOf<InitInstruction>()
                         (this as InitInstruction).apply {
-                            type.tokenType shouldBe TokenType.CURRENCY_ID
-                            type.value shouldBe "USD"
+                            type.type shouldBe Type.CURRENCY
+                            type.currencyId shouldBe "USD"
                             identifier shouldBe "salary_usd"
-                            assignmentExpression should beInstanceOf<Factor>()
-                            (assignmentExpression as Factor).apply {
+                            assignmentExpression should beInstanceOf<Factor<*>>()
+                            (assignmentExpression as Factor<*>).apply {
                                 isNegated shouldBe false
                                 functionCall shouldBe null
                                 expression shouldBe null
                                 identifier shouldBe "salary"
-                                shouldCastTo?.tokenType shouldBe TokenType.CURRENCY_ID
-                                shouldCastTo?.value shouldBe "PLN"
+                                shouldCastTo?.type shouldBe Type.CURRENCY
+                                shouldCastTo?.currencyId shouldBe "PLN"
                             }
                         }
                     }
@@ -249,12 +256,12 @@ class ParserTest : WordSpec({
                         (this as IfStatement).apply {
                             condition should beInstanceOf<EqualCondition>()
                             (condition as EqualCondition).apply {
-                                leftCond should beInstanceOf<Factor>()
-                                (leftCond as Factor).apply {
+                                leftCond should beInstanceOf<Factor<*>>()
+                                (leftCond as Factor<*>).apply {
                                     identifier shouldBe "salary"
                                 }
-                                rightCond should beInstanceOf<Factor>()
-                                (rightCond as Factor).apply {
+                                rightCond should beInstanceOf<Factor<*>>()
+                                (rightCond as Factor<*>).apply {
                                     identifier shouldBe "salary_usd"
                                 }
                             }
