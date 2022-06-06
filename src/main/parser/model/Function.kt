@@ -1,10 +1,18 @@
 package parser.model
 
-import shared.Token
+import parser.exception.DuplicateFunctionParameterIdentifierException
 
 class Function(
-    val funReturnType: Token<*>,
-    val funIdentifier: Token<*>,
+    val funReturnType: VariableType,
+    val funIdentifier: String,
     val parameters: List<Parameter>,
     val functionBlock: Block
-)
+) : ProgramNode {
+    init {
+        val paramsIdentifiers = parameters.map { it.parameterIdentifier }
+        if (paramsIdentifiers.distinct().size != paramsIdentifiers.size) {
+            val duplicateParams = paramsIdentifiers.minus(paramsIdentifiers.distinct())
+            throw DuplicateFunctionParameterIdentifierException(funIdentifier, duplicateParams)
+        }
+    }
+}

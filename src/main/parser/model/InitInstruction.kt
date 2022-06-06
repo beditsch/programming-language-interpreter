@@ -1,9 +1,7 @@
 package parser.model
 
-import shared.Token
-
 class InitInstruction(
-    val type: Token<*>,
-    val identifier: Token<*>,
+    val type: VariableType,
+    val identifier: String,
     val assignmentExpression: Expression
-) : Instruction()
+) : Statement, ProgramNode

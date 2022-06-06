@@ -1,12 +1,10 @@
 package parser.model
 
-import shared.Token
-
-class Factor(
+class Factor<LiteralType>(
     val isNegated: Boolean,
     val functionCall: FunctionCall?,
     val expression: Expression?,
-    val identifier: Token<*>?,
-    val literal: Token<*>?,
-    val shouldCastTo: Token<*>?
-)
+    val identifier: String?,
+    val literal: LiteralType?,
+    val shouldCastTo: VariableType?
+) : Expression, ProgramNode

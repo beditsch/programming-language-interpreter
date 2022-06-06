@@ -116,7 +116,7 @@ Gramatyka:
     
     expression                  = multiplication_expression, {addition_operator, multiplication_expression}
     multiplication_expression   = factor, {multiplication_operator, factor}
-    factor                      = ["-"], (function_call | "(", expression, ")" | identifier | literal), [cast_operator]
+    factor                      = ["-"], (function_call | "(", condition, ")" | identifier | literal), [cast_operator]
     
     condition               = and_condition, {"||", and_condition}
     and_condition           = comparison_condition, {"&&", comparison_condition}
