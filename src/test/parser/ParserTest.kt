@@ -59,11 +59,11 @@ class ParserTest : WordSpec({
                             (this[0] as ReturnInstruction).returnExpression.apply {
                                 this should beInstanceOf<AdditionExpression>()
                                 (this as AdditionExpression).apply {
-                                    (leftExpression as Factor<*>).literal.apply {
+                                    (leftExpression as Factor).literal.apply {
                                         this should beInstanceOf<Int>()
                                         this shouldBe 3
                                     }
-                                    (rightExpression as Factor<*>).literal.apply {
+                                    (rightExpression as Factor).literal.apply {
                                         this should beInstanceOf<Int>()
                                         this shouldBe 5
                                     }
@@ -240,14 +240,17 @@ class ParserTest : WordSpec({
                             type.type shouldBe Type.CURRENCY
                             type.currencyId shouldBe "USD"
                             identifier shouldBe "salary_usd"
-                            assignmentExpression should beInstanceOf<Factor<*>>()
-                            (assignmentExpression as Factor<*>).apply {
-                                isNegated shouldBe false
-                                functionCall shouldBe null
-                                expression shouldBe null
-                                identifier shouldBe "salary"
-                                shouldCastTo?.type shouldBe Type.CURRENCY
-                                shouldCastTo?.currencyId shouldBe "PLN"
+                            assignmentExpression should beInstanceOf<FactorWithCast>()
+                            (assignmentExpression as FactorWithCast).apply {
+                                this.factor should beInstanceOf<Factor>()
+                                (this.factor as Factor).apply {
+                                    functionCall shouldBe null
+                                    expression shouldBe null
+                                    identifier shouldBe "salary"
+                                }
+
+                                castTo.type shouldBe Type.CURRENCY
+                                castTo.currencyId shouldBe "PLN"
                             }
                         }
                     }
@@ -256,12 +259,12 @@ class ParserTest : WordSpec({
                         (this as IfStatement).apply {
                             condition should beInstanceOf<EqualCondition>()
                             (condition as EqualCondition).apply {
-                                leftCond should beInstanceOf<Factor<*>>()
-                                (leftCond as Factor<*>).apply {
+                                leftCond should beInstanceOf<Factor>()
+                                (leftCond as Factor).apply {
                                     identifier shouldBe "salary"
                                 }
-                                rightCond should beInstanceOf<Factor<*>>()
-                                (rightCond as Factor<*>).apply {
+                                rightCond should beInstanceOf<Factor>()
+                                (rightCond as Factor).apply {
                                     identifier shouldBe "salary_usd"
                                 }
                             }
@@ -276,7 +279,7 @@ class ParserTest : WordSpec({
 private fun parseFromString(inputString: String): Program {
     val source = StringSource(inputString)
 
-    val currencyIdSet = setOf<String>("PLN", "USD", "EUR")
+    val currencyIdSet = setOf("PLN", "USD", "EUR")
     val lexer = Lexer(source, currencyIdSet)
     val parser = Parser(lexer)
 

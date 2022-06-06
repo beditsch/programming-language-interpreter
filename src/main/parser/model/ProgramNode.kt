@@ -1,3 +1,7 @@
 package parser.model
 
-interface ProgramNode
+import interpreter.VisitorInterface
+
+interface ProgramNode {
+    fun acceptVisitor(visitor: VisitorInterface)
+}

@@ -1,10 +1,14 @@
 package parser.model
 
-class Factor<LiteralType>(
-    val isNegated: Boolean,
+import interpreter.VisitorInterface
+
+class Factor(
     val functionCall: FunctionCall?,
     val expression: Expression?,
     val identifier: String?,
-    val literal: LiteralType?,
-    val shouldCastTo: VariableType?
-) : Expression, ProgramNode
+    val literal: Any?
+) : Expression, ProgramNode {
+    override fun acceptVisitor(visitor: VisitorInterface) {
+        visitor.visitFactor(this)
+    }
+}

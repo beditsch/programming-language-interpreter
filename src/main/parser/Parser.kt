@@ -63,7 +63,6 @@ class Parser(
 
         if (functions.containsKey(functionIdentifier))
             throw DuplicateFunctionDefinitionException(functionIdentifier, functionIdentifierToken.position)
-
         functions[functionIdentifier] = Function(VariableType(functionReturnType), functionIdentifier, parameters, block)
         return true
     }
@@ -325,13 +324,13 @@ class Parser(
     }
 
     private fun tryParseMultiplicationExpression(): Expression? {
-        var leftFactor = parseFactor() ?: return null
+        var leftFactor = tryParseNegatedFactorWithCast() ?: return null
 
         var operator: Token<*>?
         var rightFactor: Expression
         while (lexer.currentTokenIs(listOf(TokenType.MULTIPLY, TokenType.DIVIDE))) {
             operator = lexer.getTokenAndMoveToNext()
-            rightFactor = parseFactor()
+            rightFactor = tryParseNegatedFactorWithCast()
                 ?: throw MissingExpressionException(Parser::tryParseMultiplicationExpression.name, lexer.getToken()?.position)
             val expression = tokenTypeToExpressionConstructorMap[operator.tokenType]?.let { it(leftFactor, rightFactor) }
                 ?: throw MissingExpressionConstructorForTokenTypeException(operator.tokenType.toString())
@@ -341,27 +340,39 @@ class Parser(
         return leftFactor
     }
 
-    private fun parseFactor(): Expression? {
+    private fun tryParseNegatedFactorWithCast(): Expression? {
         val isFactorNegated = lexer.consumeIfCurrentTokenIs(TokenType.SUBTRACT)
+        val factor = tryParseFactorWithCast()
+            ?: if (isFactorNegated) throw MissingExpressionException(Parser::tryParseNegatedFactorWithCast.name, lexer.getToken()?.position)
+            else return null
 
+        return if (isFactorNegated) NegatedFactor(factor) else factor
+    }
+
+    private fun tryParseFactorWithCast(): Expression? {
+        val factor = tryParseFactor() ?: return null
+        val castTo = tryParseCast()?.let { VariableType(it) }
+
+        return if (castTo != null) FactorWithCast(factor, castTo) else factor
+    }
+
+    private fun tryParseFactor(): Expression? {
         val conditionInParenth = tryParseConditionInParentheses()
         if (conditionInParenth != null)
-            return Factor(isFactorNegated, null, conditionInParenth, null, null, tryParseCast()?.let { VariableType(it) })
+            return Factor(null, conditionInParenth, null, null)
 
         val literal = tryParseLiteral()
         if (literal != null) {
-            return Factor(isFactorNegated, null, null, null, literal.value, tryParseCast()?.let { VariableType(it) })
+            return Factor(null, null, null, literal.value)
         }
 
         val (identifier, functionCall) = tryParseIdentifierOrFunctionCall()
         if (identifier != null)
-            return Factor(isFactorNegated, null, null, identifier, null, tryParseCast()?.let { VariableType(it) })
+            return Factor(null, null, identifier, null)
         if (functionCall != null)
-            return Factor(isFactorNegated, functionCall, null, null, null, tryParseCast()?.let { VariableType(it) })
+            return Factor(functionCall, null, null, null)
 
-        if (isFactorNegated)
-            throw MissingExpressionException(Parser::parseFactor.name, lexer.getToken()?.position)
-        else return null
+        return null
     }
 
     private fun tryParseCast(): Token<*>? {

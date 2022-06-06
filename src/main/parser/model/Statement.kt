@@ -1,3 +1,3 @@
 package parser.model
 
-interface Statement
+interface Statement : ProgramNode

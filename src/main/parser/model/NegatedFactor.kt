@@ -2,10 +2,11 @@ package parser.model
 
 import interpreter.VisitorInterface
 
-class Block(
-    val instrAndStatementsList: List<Statement>
-) : Statement, ProgramNode {
+class NegatedFactor(
+    val factor: Expression
+) : Expression, ProgramNode {
+
     override fun acceptVisitor(visitor: VisitorInterface) {
-        visitor.visitBlock(this)
+        visitor.visitNegatedFactor(this)
     }
 }

@@ -1,5 +1,6 @@
 package parser.model
 
+import interpreter.VisitorInterface
 import parser.exception.DuplicateFunctionParameterIdentifierException
 
 class Function(
@@ -14,5 +15,9 @@ class Function(
             val duplicateParams = paramsIdentifiers.minus(paramsIdentifiers.distinct())
             throw DuplicateFunctionParameterIdentifierException(funIdentifier, duplicateParams)
         }
+    }
+
+    override fun acceptVisitor(visitor: VisitorInterface) {
+        visitor.visitFunction(this)
     }
 }
