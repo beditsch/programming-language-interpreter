@@ -1,8 +1,10 @@
 package interpreter
 
+import interpreter.exception.* // ktlint-disable no-wildcard-imports
 import interpreter.model.* // ktlint-disable no-wildcard-imports
 import interpreter.utils.ArithmeticsHelper
 import interpreter.utils.ComparisonHelper
+import interpreter.utils.ValidationHelper
 import parser.model.* // ktlint-disable no-wildcard-imports
 import parser.model.Function
 import parser.model.arithmetic.AdditionExpression
@@ -23,23 +25,24 @@ class Visitor(
         val function = program.functions[functionCall.identifier]
             ?: throw TODO("add print function support")
 
-        if (function.parameters.size != functionCall.arguments.size)
-            throw TODO("Wrong number of arguments provided")
+        ValidationHelper.validateNumberOfFunctionCallArguments(function, functionCall)
 
-        // TODO: check if the types are correct
         val argumentValues = functionCall.arguments.map { it.acceptVisitor(this); getLastVisitVal() }
-        val funLocalVarsMap = function.parameters.mapIndexed {
-                idx, param ->
+        ValidationHelper.validateParameterTypes(function.parameters, argumentValues)
+        val funLocalVarsMap = function.parameters.mapIndexed { idx, param ->
             param.parameterIdentifier to argumentValues[idx]
         }.toMap().toMutableMap()
+
         val scope = Scope(funLocalVarsMap)
         val functionCallContext = FunctionCallContext(mutableListOf(scope))
         functionCallContexts.add(functionCallContext)
 
-        // TODO: visit Function Declaration Block
         function.acceptVisitor(this)
+        ValidationHelper.validateFunctionReturnValueType(function.funReturnType, lastVisitResult)
+        lastVisitResult = if (function.funReturnType.type == Type.VOID) null
+        else VisitResult(getLastVisitVal())
 
-        // TODO: finish impl
+        functionCallContexts.removeLast()
     }
 
     override fun visitFunction(function: Function) {
@@ -62,7 +65,7 @@ class Visitor(
         val newVal = getLastVisitVal()
         val varIdentifier = assignInstruction.identifier
         if (!functionCallContext.tryUpdateVariable(varIdentifier, newVal))
-            throw TODO()
+            throw VariableNotFoundException(varIdentifier)
     }
 
     override fun visitFactor(factor: Factor) {
@@ -71,7 +74,7 @@ class Visitor(
             factor.expression != null -> factor.expression.acceptVisitor(this)
             factor.identifier != null -> retrieveVariable(factor.identifier)
             factor.literal != null -> retrieveLiteral(factor.literal)
-            else -> throw TODO()
+            else -> throw NullFactorAttributesException()
         }
     }
 
@@ -83,12 +86,11 @@ class Visitor(
 
     override fun visitNegatedFactor(negatedFactor: NegatedFactor) {
         negatedFactor.factor.acceptVisitor(this)
-        val value = getLastVisitVal()
-        val negatedVal: Any = when (value) {
+        val negatedVal: Any = when (val value = getLastVisitVal()) {
             is Int -> -value
             is Double -> -value
             is Currency -> Currency(-value.amount, value.currencyId)
-            else -> throw TODO()
+            else -> throw UnsupportedValueTypeException(value::class.java.name, Visitor::visitNegatedFactor.name)
         }
         lastVisitResult = VisitResult(negatedVal)
     }
@@ -102,8 +104,7 @@ class Visitor(
     override fun visitIfStatement(ifStatement: IfStatement) {
         ifStatement.condition.acceptVisitor(this)
         val result = getLastVisitVal()
-        if (result !is Boolean) throw TODO()
-        if (result)
+        if (result.toBoolean())
             ifStatement.instruction.acceptVisitor(this)
         else ifStatement.elseInstruction?.acceptVisitor(this)
     }
@@ -123,7 +124,7 @@ class Visitor(
         initInstruction.assignmentExpression.acceptVisitor(this)
         val value = getLastVisitVal()
         val identifier = initInstruction.identifier
-        validateInitInstructionTypes(initInstruction.type, value)
+        ValidationHelper.validateInitInstructionTypes(initInstruction.type, value)
         val functionCallContext = functionCallContexts.last()
         functionCallContext.addVariable(identifier, value)
     }
@@ -265,7 +266,7 @@ class Visitor(
     private fun retrieveVariable(identifier: String) {
         val functionCallContext = functionCallContexts.last()
         val value = functionCallContext.tryGetVariableValue(identifier)
-            ?: throw TODO()
+            ?: throw VariableNotFoundException(identifier)
         lastVisitResult = VisitResult(value)
     }
 
@@ -273,29 +274,16 @@ class Visitor(
         lastVisitResult = VisitResult(literal)
     }
 
-    private fun validateInitInstructionTypes(type: VariableType, value: Any) {
-        when (type.type) {
-            Type.INT -> if (value !is Int) throw TODO()
-            Type.FLOAT -> if (value !is Double) throw TODO()
-            Type.STRING -> if (value !is String) throw TODO()
-            Type.BOOL -> if (value !is Boolean) throw TODO()
-            Type.CURRENCY ->
-                if (value !is Int && value !is Float && !(value is Currency && value.currencyId == type.currencyId))
-                    throw TODO()
-            else -> throw TODO()
-        }
-    }
-
     private fun Any.toBoolean(): Boolean {
-        if (this !is Boolean) throw TODO()
+        if (this !is Boolean) throw MismatchedValueTypeException(Boolean::class.java.name, this)
         else return this
     }
 
     private fun getLastVisitVal(): Any {
-        return lastVisitResult?.value ?: throw TODO()
+        return lastVisitResult?.value ?: throw NullLastVisitResultException()
     }
 
     private fun getLastVisitWasValueReturned(): Boolean {
-        return lastVisitResult?.wasValueReturned ?: throw TODO()
+        return lastVisitResult?.wasValueReturned ?: throw NullLastVisitResultException()
     }
 }

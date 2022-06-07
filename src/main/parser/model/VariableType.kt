@@ -22,4 +22,9 @@ class VariableType {
         if (type != other.type || currencyId != other.currencyId) return false
         return true
     }
+
+    override fun toString(): String {
+        return if (type == Type.CURRENCY) "${Type.CURRENCY.name}: $currencyId"
+        else type.name
+    }
 }

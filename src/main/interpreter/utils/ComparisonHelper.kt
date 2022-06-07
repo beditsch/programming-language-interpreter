@@ -1,5 +1,6 @@
 package interpreter.utils
 
+import interpreter.exception.CombinationOfUnsupportedValueTypesException
 import interpreter.exception.DifferentTypesComparisonException
 import interpreter.model.Currency
 
@@ -20,7 +21,9 @@ class ComparisonHelper {
                 is String -> value1.compareTo(value2 as String)
                 is Currency -> value1.amount.compareTo((value2 as Currency).amount)
                 is Boolean -> value1.compareTo(value2 as Boolean)
-                else -> throw TODO()
+                else -> throw CombinationOfUnsupportedValueTypesException(
+                    value1::class.java.name, value2::class.java.name, Companion::compareTo.name
+                )
             }
         }
 
