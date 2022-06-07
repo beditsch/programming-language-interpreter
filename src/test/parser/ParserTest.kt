@@ -11,11 +11,11 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.beInstanceOf
 import lexer.Lexer
 import lexer.source.StringSource
-import parser.exception.MissingFunctionBlockException
-import parser.exception.UnexpectedTokenException
+import parser.exception.* // ktlint-disable no-wildcard-imports
 import parser.model.* // ktlint-disable no-wildcard-imports
 import parser.model.arithmetic.AdditionExpression
 import parser.model.condition.EqualCondition
+import parser.model.condition.GreaterCondition
 
 class ParserTest : WordSpec({
     Parser::class.java.simpleName should {
@@ -211,7 +211,93 @@ class ParserTest : WordSpec({
             }
         }
 
-        "parse simple program" {
+        "throw ${DuplicateFunctionDefinitionException::class.java.simpleName} when two functions have the same identifier" {
+            val fun1 = "void myFunc(int param1, float param2) { int myVal = myFunc(param1, param2);}"
+            val fun2 = "void myFunc(float param1, bool param2) { int myVal = myFunc(param1, param2);}"
+            val inputString = "$fun1 $fun2"
+            shouldThrow<DuplicateFunctionDefinitionException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "myFunc"
+            }
+        }
+
+        "throw ${MissingParameterException::class.java.simpleName} when there is no function parameter after comma" {
+            val inputString = "void myFunc(int param1, float param2, ) { int myVal = myFunc(param1, param2);}"
+            shouldThrow<MissingParameterException> {
+                parseFromString(inputString)
+            }
+        }
+
+        "throw ${UnexpectedTokenException::class.java.simpleName} when function block doesn't end with a right curly bracket" {
+            val inputString = "void myFunc(int param1, float param2) { int myVal = myFunc(param1, param2);"
+            shouldThrow<UnexpectedTokenException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "RIGHT_CURLY_BRACKET"
+            }
+        }
+
+        "throw ${MissingInstructionException::class.java.simpleName} when if condition is not followed by instruction" {
+            val inputString = "void myFunc(int param1, float param2) { if (true) }"
+            shouldThrow<MissingInstructionException> {
+                parseFromString(inputString)
+            }
+        }
+
+        "throw ${MissingInstructionException::class.java.simpleName} when else keyword is not followed by instruction" {
+            val inputString = "void myFunc(int param1, float param2) { if (false) {} else }"
+            shouldThrow<MissingInstructionException> {
+                parseFromString(inputString)
+            }
+        }
+
+        "throw ${UnexpectedTokenException::class.java.simpleName} when while statement has no condition" {
+            val inputString = "void myFunc(int param1, float param2) { while { int a = 3 }}"
+            shouldThrow<UnexpectedTokenException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "LEFT_BRACKET"
+            }
+        }
+
+        "throw ${MissingBlockException::class.java.simpleName} when while statement has no block" {
+            val inputString = "void myFunc(int param1, float param2) { while (true) }"
+            shouldThrow<MissingBlockException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "tryParseWhileStatement"
+            }
+        }
+
+        "throw ${UnexpectedTokenException::class.java.simpleName} when init instruction has no variable identifier" {
+            val inputString = "void myFunc(int param1, float param2) { float = 3.0 }"
+            shouldThrow<UnexpectedTokenException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "IDENTIFIER"
+            }
+        }
+
+        "throw ${UnexpectedTokenException::class.java.simpleName} when init instruction has assignment token" {
+            val inputString = "void myFunc(int param1, float param2) { float myVar 3.0 }"
+            shouldThrow<UnexpectedTokenException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "ASSIGN"
+            }
+        }
+
+        "throw ${MissingExpressionException::class.java.simpleName} when return keyword is not followed by expression" {
+            val inputString = "void myFunc(int param1, float param2) { float myVar = 3.0; return; }"
+            shouldThrow<MissingExpressionException> {
+                parseFromString(inputString)
+            }.apply {
+                message shouldContain "tryParseReturnInstruction"
+            }
+        }
+
+        "parse simple program with if statement" {
             val inputString = "int main () {\n" +
                 "\t\tPLN salary = 1000.0;\n" +
                 "\t\tUSD dividend = 12.0;\n" +
@@ -266,6 +352,66 @@ class ParserTest : WordSpec({
                                 rightCond should beInstanceOf<Factor>()
                                 (rightCond as Factor).apply {
                                     identifier shouldBe "salary_usd"
+                                }
+                            }
+                        }
+                    }
+                }
+            } shouldNotBe null
+        }
+
+        "parse simple program with while statement" {
+            val inputString = "int main (int arg1) {\n" +
+                "\t\tPLN salary = 1000.0;\n" +
+                "\t\twhile (salary > 100.0) {\n" +
+                "\t\t\tsalary = salary - 100.0;\n" +
+                "\t\t}\n" +
+                "\t}"
+
+            val program = parseFromString(inputString)
+            program.functions.size shouldBe 1
+            program.functions["main"]?.apply {
+                funReturnType.type shouldBe Type.INT
+                funIdentifier shouldBe "main"
+
+                parameters.size shouldBe 1
+
+                functionBlock.instrAndStatementsList.apply {
+                    size shouldBe 2
+                    this[0].apply {
+                        this should beInstanceOf<InitInstruction>()
+                        (this as InitInstruction).apply {
+                            type.type shouldBe Type.CURRENCY
+                            type.currencyId shouldBe "PLN"
+                            identifier shouldBe "salary"
+                            assignmentExpression should beInstanceOf<Factor>()
+                            (assignmentExpression as Factor).apply {
+                                functionCall shouldBe null
+                                expression shouldBe null
+                                identifier shouldBe null
+                                literal should beInstanceOf<Double>()
+                                (literal as Double) shouldBe 1000.0
+                            }
+                        }
+                    }
+                    this[1].apply {
+                        this should beInstanceOf<WhileStatement>()
+                        (this as WhileStatement).apply {
+                            condition should beInstanceOf<GreaterCondition>()
+                            (condition as GreaterCondition).apply {
+                                leftCond should beInstanceOf<Factor>()
+                                (leftCond as Factor).apply {
+                                    identifier shouldBe "salary"
+                                }
+                                rightCond should beInstanceOf<Factor>()
+                                (rightCond as Factor).apply {
+                                    (literal as Double) shouldBe 100.0
+                                }
+                            }
+                            block.apply {
+                                instrAndStatementsList.size shouldBe 1
+                                instrAndStatementsList[0].apply {
+                                    this should beInstanceOf<AssignInstruction>()
                                 }
                             }
                         }

@@ -380,7 +380,7 @@ class Parser(
         if (!lexer.currentTokenIsType())
             throw UnexpectedTokenException(
                 Parser::tryParseCast.name,
-                listOf(TokenType.IDENTIFIER, TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.BOOL),
+                listOf(TokenType.CURRENCY_ID, TokenType.INT, TokenType.FLOAT, TokenType.STRING, TokenType.BOOL),
                 lexer.getToken()
             )
         return lexer.getTokenAndMoveToNext()
