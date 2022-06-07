@@ -12,10 +12,11 @@ import parser.model.arithmetic.DivisionExpression
 import parser.model.arithmetic.MultiplicationExpression
 import parser.model.arithmetic.SubtractionExpression
 import parser.model.condition.* // ktlint-disable no-wildcard-imports
+import java.math.BigDecimal
 
 class Visitor(
     val program: Program,
-    val currencyMap: HashMap<String, Float>,
+    val currencyMap: HashMap<String, HashMap<String, Double>>,
     val functionCallContexts: MutableList<FunctionCallContext> = mutableListOf(),
     private var lastVisitResult: VisitResult? = null
 ) : VisitorInterface {
@@ -81,7 +82,16 @@ class Visitor(
     override fun visitFactorWithCast(factorWithCast: FactorWithCast) {
         factorWithCast.factor.acceptVisitor(this)
         val value = getLastVisitVal()
-        // TODO: finish impl
+        val castTo = factorWithCast.castTo
+        val castedVal = when (value) {
+            is Int -> castInt(value, castTo)
+            is Double -> castDouble(value, castTo)
+            is String -> castString(value, castTo)
+            is Boolean -> castBool(value, castTo)
+            is Currency -> castCurrency(value, castTo)
+            else -> throw UnsupportedCastException(value::class.java.name)
+        }
+        lastVisitResult = VisitResult(castedVal)
     }
 
     override fun visitNegatedFactor(negatedFactor: NegatedFactor) {
@@ -261,6 +271,60 @@ class Visitor(
 
         val result = ComparisonHelper.lessOrEqual(leftVal, rightVal)
         lastVisitResult = VisitResult(result)
+    }
+
+    private fun castInt(value: Int, castTo: VariableType): Any {
+        return when (castTo.type) {
+            Type.INT -> value
+            Type.FLOAT -> value.toDouble()
+            Type.STRING -> value.toString()
+            Type.CURRENCY -> castTo.currencyId?.let { Currency(BigDecimal(value), it) }
+                ?: throw MissingCurrencyIdentifierException()
+            else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
+        }
+    }
+
+    private fun castDouble(value: Double, castTo: VariableType): Any {
+        return when (castTo.type) {
+            Type.INT -> value.toInt()
+            Type.FLOAT -> value
+            Type.STRING -> value.toString()
+            Type.CURRENCY -> castTo.currencyId?.let { Currency(BigDecimal(value), it) }
+                ?: throw MissingCurrencyIdentifierException()
+            else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
+        }
+    }
+
+    private fun castString(value: String, castTo: VariableType): Any {
+        return when (castTo.type) {
+            Type.INT -> value.toInt()
+            Type.FLOAT -> value.toDouble()
+            Type.STRING -> value
+            else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
+        }
+    }
+
+    private fun castBool(value: Boolean, castTo: VariableType): Any {
+        return when (castTo.type) {
+            Type.STRING -> value.toString()
+            else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
+        }
+    }
+
+    private fun castCurrency(value: Currency, castTo: VariableType): Any {
+        return when (castTo.type) {
+            Type.INT -> value.amount.toInt()
+            Type.FLOAT -> value.amount.toDouble()
+            Type.STRING -> value.toString()
+            Type.CURRENCY -> {
+                val castToCurrencyId = castTo.currencyId ?: throw MissingCurrencyIdentifierException()
+                val exchangeRate = currencyMap[value.currencyId]?.get(castToCurrencyId)
+                    ?: throw MissingCurrencyExchangeRateException(value.currencyId, castToCurrencyId)
+                val newAmount = value.amount * BigDecimal(exchangeRate)
+                Currency(newAmount, castToCurrencyId)
+            }
+            else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
+        }
     }
 
     private fun retrieveVariable(identifier: String) {
