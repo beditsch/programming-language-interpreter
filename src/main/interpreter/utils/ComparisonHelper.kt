@@ -6,8 +6,14 @@ import interpreter.model.Currency
 
 class ComparisonHelper {
     companion object {
-        fun equal(value1: Any, value2: Any): Boolean = compareTo(value1, value2) == 0
-        fun notEqual(value1: Any, value2: Any): Boolean = compareTo(value1, value2) != 0
+        fun equal(value1: Any, value2: Any): Boolean {
+            return if (value1 is Boolean && value2 is Boolean) value1 == value2
+            else compareTo(value1, value2) == 0
+        }
+        fun notEqual(value1: Any, value2: Any): Boolean {
+            return if (value1 is Boolean && value2 is Boolean) value1 != value2
+            else compareTo(value1, value2) != 0
+        }
         fun greater(value1: Any, value2: Any): Boolean = compareTo(value1, value2) > 0
         fun greaterOrEqual(value1: Any, value2: Any): Boolean = compareTo(value1, value2) >= 0
         fun less(value1: Any, value2: Any): Boolean = compareTo(value1, value2) < 0
@@ -20,7 +26,6 @@ class ComparisonHelper {
                 is Double -> value1.compareTo(value2 as Double)
                 is String -> value1.compareTo(value2 as String)
                 is Currency -> value1.amount.compareTo((value2 as Currency).amount)
-                is Boolean -> value1.compareTo(value2 as Boolean)
                 else -> throw CombinationOfUnsupportedValueTypesException(
                     value1::class.java.name, value2::class.java.name, Companion::compareTo.name
                 )
