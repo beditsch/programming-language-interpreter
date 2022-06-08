@@ -10,8 +10,9 @@ class Interpreter(
     companion object {
         private const val MAIN_FUNCTION_ID = "main"
     }
-    fun interpret() {
+    fun interpret(): Any? {
         val result = visitor.executeProgram(MAIN_FUNCTION_ID)
         print("Program execution result: $result")
+        return result
     }
 }

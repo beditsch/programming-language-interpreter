@@ -226,7 +226,7 @@ Projekt będzie się składał z trzech głównych modułów funkcjonalnych:
 Projekt jest zaimplementowany z wykorzystaniem Kotlina. Do testów posłużyła biblioteka Kotest. Do kontroli wersji wykorzystano GitLab.
 
 ## Sposób testowania
-Do zweryfikowania poprawności działania służą testy jednostkowe i integracyjne scenariuszy pozytywnych i negatywnych (łącznie ponad 60 testów, jednak wiele z nich zawiera więcej niż jeden przypadek testowy; realnie około 200 przypadków testowych):
+Do zweryfikowania poprawności działania służą testy jednostkowe i integracyjne scenariuszy pozytywnych i negatywnych (łącznie 69 testów, jednak wiele z nich zawiera więcej niż jeden przypadek testowy; realnie około 200 przypadków testowych):
 - leksera
 - analizatora składniowego programu
 - analizatora składniowego pliku konfiguracyjnego

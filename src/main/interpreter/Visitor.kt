@@ -23,17 +23,17 @@ class Visitor(
 
     fun executeProgram(mainFunctionId: String): Any? {
         val mainFunctionDeclaration = program.functions[mainFunctionId]
-            ?: throw MissingMainFunctionDeclarationException(mainFunctionId)
+            ?: throw MissingFunctionDeclarationException(mainFunctionId)
         visitFunctionCall(FunctionCall(mainFunctionId, emptyList()))
         return if (mainFunctionDeclaration.funReturnType.type != Type.VOID)
             getLastVisitVal()
         else null
     }
 
-    // TODO kolejna mapka z mergem funkcji z programu z funkcjami własnymi
     override fun visitFunctionCall(functionCall: FunctionCall) {
         val function = program.functions[functionCall.identifier]
-            ?: throw TODO("add print function support")
+            ?: throw MissingFunctionDeclarationException(functionCall.identifier)
+        // TODO("add print function support")
 
         ValidationHelper.validateNumberOfFunctionCallArguments(function, functionCall)
 
