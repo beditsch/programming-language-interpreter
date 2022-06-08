@@ -42,7 +42,7 @@ class ConfigParserTest : WordSpec({
             val input = ";"
             val config = parseFromString(input)
             config.apply {
-                currencyIds shouldBe emptyList()
+                currencyIds shouldBe emptySet()
                 exchangeRatesMap.keys.size shouldBe 0
             }
         }

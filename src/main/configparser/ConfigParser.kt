@@ -42,7 +42,7 @@ class ConfigParser(
         return Config(currencyIds, exchangeRatesMap)
     }
 
-    private fun tryParseCurrencyIds(): List<String>? {
+    private fun tryParseCurrencyIds(): Set<String>? {
         if (!lexer.currentTokenIs(listOf(TokenType.IDENTIFIER, TokenType.SEMICOLON)))
             return null
 
@@ -55,7 +55,7 @@ class ConfigParser(
             } else throw DuplicatedCurrencyIdException(token.value.toString())
         }
         lexer.getNextToken()
-        return currencyIds
+        return currencyIds.toSet()
     }
 
     private fun tryParseCurrencyExchangeRates(): Pair<String, List<Double>>? {

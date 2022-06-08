@@ -1,6 +1,6 @@
 package configparser.model
 
 class Config(
-    val currencyIds: List<String>,
+    val currencyIds: Set<String>,
     val exchangeRatesMap: Map<String, Map<String, Double>>
 )

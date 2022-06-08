@@ -16,12 +16,21 @@ import java.math.BigDecimal
 
 class Visitor(
     val program: Program,
-    val currencyMap: HashMap<String, HashMap<String, Double>>,
+    val currencyMap: Map<String, Map<String, Double>>,
     val functionCallContexts: MutableList<FunctionCallContext> = mutableListOf(),
     private var lastVisitResult: VisitResult? = null
 ) : VisitorInterface {
-    // TODO kolejna mapka z mergem funkcji z programu z funkcjami własnymi
 
+    fun executeProgram(mainFunctionId: String): Any? {
+        val mainFunctionDeclaration = program.functions[mainFunctionId]
+            ?: throw MissingMainFunctionDeclarationException(mainFunctionId)
+        visitFunctionCall(FunctionCall(mainFunctionId, emptyList()))
+        return if (mainFunctionDeclaration.funReturnType.type != Type.VOID)
+            getLastVisitVal()
+        else null
+    }
+
+    // TODO kolejna mapka z mergem funkcji z programu z funkcjami własnymi
     override fun visitFunctionCall(functionCall: FunctionCall) {
         val function = program.functions[functionCall.identifier]
             ?: throw TODO("add print function support")
