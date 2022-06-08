@@ -12,7 +12,7 @@ class Function(
     init {
         val paramsIdentifiers = parameters.map { it.parameterIdentifier }
         if (paramsIdentifiers.distinct().size != paramsIdentifiers.size) {
-            val duplicateParams = paramsIdentifiers.minus(paramsIdentifiers.distinct())
+            val duplicateParams = paramsIdentifiers.filter { it.count() > 1 }.distinct()
             throw DuplicateFunctionParameterIdentifierException(funIdentifier, duplicateParams)
         }
     }
