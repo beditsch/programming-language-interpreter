@@ -18,7 +18,8 @@ class Visitor(
     val program: Program,
     val currencyMap: Map<String, Map<String, Double>>,
     val functionCallContexts: MutableList<FunctionCallContext> = mutableListOf(),
-    private var lastVisitResult: VisitResult? = null
+    private var lastVisitResult: Any? = null,
+    private var returning: Boolean = false
 ) : VisitorInterface {
 
     fun executeProgram(mainFunctionId: String): Any? {
@@ -52,7 +53,7 @@ class Visitor(
         function.acceptVisitor(this)
         ValidationHelper.validateFunctionReturnValueType(function.funReturnType, lastVisitResult)
         lastVisitResult = if (function.funReturnType.type == Type.VOID) null
-        else VisitResult(getLastVisitVal())
+        else getLastVisitVal()
 
         functionCallContexts.removeLast()
     }
@@ -66,7 +67,7 @@ class Visitor(
         functionCallContext.scopes.add(Scope())
         block.instrAndStatementsList.forEach {
             it.acceptVisitor(this)
-            if (lastVisitResult?.wasValueReturned == true) return@forEach
+            if (returning) return@forEach
         }
         functionCallContext.scopes.removeLast()
     }
@@ -102,7 +103,7 @@ class Visitor(
             is Currency -> castCurrency(value, castTo)
             else -> throw UnsupportedCastException(value::class.java.name)
         }
-        lastVisitResult = VisitResult(castedVal)
+        lastVisitResult = castedVal
     }
 
     override fun visitNegatedFactor(negatedFactor: NegatedFactor) {
@@ -113,13 +114,15 @@ class Visitor(
             is Currency -> Currency(-value.amount, value.currencyId)
             else -> throw UnsupportedValueTypeException(value::class.java.name, Visitor::visitNegatedFactor.name)
         }
-        lastVisitResult = VisitResult(negatedVal)
+        lastVisitResult = negatedVal
     }
 
     override fun visitReturnInstruction(returnInstruction: ReturnInstruction) {
-        returnInstruction.returnExpression.acceptVisitor(this)
-        val value = getLastVisitVal()
-        lastVisitResult = VisitResult(value, true)
+        val expr = returnInstruction.returnExpression
+        if (expr != null) {
+            expr.acceptVisitor(this)
+        } else { lastVisitResult = null }
+        returning = true
     }
 
     override fun visitIfStatement(ifStatement: IfStatement) {
@@ -135,7 +138,7 @@ class Visitor(
         var condValue = getLastVisitVal()
         while (condValue.toBoolean()) {
             whileStatement.block.acceptVisitor(this)
-            if (getLastVisitWasValueReturned()) break
+            if (returning) break
             whileStatement.condition.acceptVisitor(this)
             condValue = getLastVisitVal()
         }
@@ -157,7 +160,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ArithmeticsHelper.add(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitSubtractionExpression(subtractionExpression: SubtractionExpression) {
@@ -167,7 +170,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ArithmeticsHelper.subtract(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitMultiplicationExpression(multiplicationExpression: MultiplicationExpression) {
@@ -177,7 +180,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ArithmeticsHelper.multiply(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitDivisionExpression(divisionExpression: DivisionExpression) {
@@ -187,7 +190,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ArithmeticsHelper.divide(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitOrCondition(orCondition: OrCondition) {
@@ -195,33 +198,33 @@ class Visitor(
         val leftVal = getLastVisitVal().toBoolean()
 
         if (leftVal) {
-            lastVisitResult = VisitResult(leftVal)
+            lastVisitResult = leftVal
             return
         }
 
         orCondition.rightCond.acceptVisitor(this)
         val rightVal = getLastVisitVal().toBoolean()
-        lastVisitResult = VisitResult(rightVal)
+        lastVisitResult = rightVal
     }
 
     override fun visitAndCondition(andCondition: AndCondition) {
         andCondition.leftCond.acceptVisitor(this)
         val leftVal = getLastVisitVal().toBoolean()
         if (!leftVal) {
-            lastVisitResult = VisitResult(leftVal)
+            lastVisitResult = leftVal
             return
         }
 
         andCondition.rightCond.acceptVisitor(this)
         val rightVal = getLastVisitVal().toBoolean()
-        lastVisitResult = VisitResult(rightVal)
+        lastVisitResult = rightVal
     }
 
     override fun visitNotCondition(notCondition: NotCondition) {
         notCondition.expression.acceptVisitor(this)
         val value = getLastVisitVal().toBoolean()
 
-        lastVisitResult = VisitResult(!value)
+        lastVisitResult = !value
     }
 
     override fun visitEqualCondition(equalCondition: EqualCondition) {
@@ -231,7 +234,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.equal(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitNotEqualCondition(notEqualCondition: NotEqualCondition) {
@@ -241,7 +244,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.notEqual(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitGreaterCondition(greaterCondition: GreaterCondition) {
@@ -251,7 +254,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.greater(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitGreaterOrEqualCondition(greaterOrEqualCondition: GreaterOrEqualCondition) {
@@ -261,7 +264,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.greaterOrEqual(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitLessCondition(lessCondition: LessCondition) {
@@ -271,7 +274,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.less(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     override fun visitLessOrEqualCondition(lessOrEqualCondition: LessOrEqualCondition) {
@@ -281,7 +284,7 @@ class Visitor(
         val rightVal = getLastVisitVal()
 
         val result = ComparisonHelper.lessOrEqual(leftVal, rightVal)
-        lastVisitResult = VisitResult(result)
+        lastVisitResult = result
     }
 
     private fun visitBuiltInFunction(functionCall: FunctionCall) {
@@ -290,7 +293,7 @@ class Visitor(
         val argumentValues = functionCall.arguments.map { it.acceptVisitor(this); getLastVisitVal() }
         val function = functionConstructor(argumentValues)
         val result = function.execute()
-        lastVisitResult = if (result != null) VisitResult(result) else null
+        lastVisitResult = result
     }
 
     private fun castInt(value: Int, castTo: VariableType): Any {
@@ -327,6 +330,7 @@ class Visitor(
     private fun castBool(value: Boolean, castTo: VariableType): Any {
         return when (castTo.type) {
             Type.STRING -> value.toString()
+            Type.BOOL -> value
             else -> throw UnsupportedCastException(value::class.java.name, castTo.type)
         }
     }
@@ -351,11 +355,11 @@ class Visitor(
         val functionCallContext = functionCallContexts.last()
         val value = functionCallContext.tryGetVariableValue(identifier)
             ?: throw VariableNotFoundException(identifier)
-        lastVisitResult = VisitResult(value)
+        lastVisitResult = value
     }
 
     private fun retrieveLiteral(literal: Any) {
-        lastVisitResult = VisitResult(literal)
+        lastVisitResult = literal
     }
 
     private fun Any.toBoolean(): Boolean {
@@ -364,11 +368,7 @@ class Visitor(
     }
 
     private fun getLastVisitVal(): Any {
-        return lastVisitResult?.value ?: throw NullLastVisitResultException()
-    }
-
-    private fun getLastVisitWasValueReturned(): Boolean {
-        return lastVisitResult?.wasValueReturned ?: throw NullLastVisitResultException()
+        return lastVisitResult ?: throw NullLastVisitResultException()
     }
 
     private fun getBuiltInFunctions(): Map<String, (List<Any>) -> BuiltInFunction> {

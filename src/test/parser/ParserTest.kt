@@ -288,15 +288,6 @@ class ParserTest : WordSpec({
             }
         }
 
-        "throw ${MissingExpressionException::class.java.simpleName} when return keyword is not followed by expression" {
-            val inputString = "void myFunc(int param1, float param2) { float myVar = 3.0; return; }"
-            shouldThrow<MissingExpressionException> {
-                parseFromString(inputString)
-            }.apply {
-                message shouldContain "tryParseReturnInstruction"
-            }
-        }
-
         "parse simple program with if statement" {
             val inputString = "int main () {\n" +
                 "\t\tPLN salary = 1000.0;\n" +

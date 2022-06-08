@@ -219,7 +219,6 @@ class Parser(
     private fun tryParseReturnInstruction(): ReturnInstruction? {
         if (!lexer.consumeIfCurrentTokenIs(TokenType.RETURN)) return null
         val expression = tryParseExpression()
-            ?: throw MissingExpressionException(Parser::tryParseReturnInstruction.name, lexer.getToken()?.position)
 
         return ReturnInstruction(expression)
     }

@@ -108,7 +108,7 @@ Gramatyka:
     init_instruction    = type, identifier, assignment
     assign_instruction  = identifier, assignment
     assignment          = "=", expression
-    return_instruction  = "return", expression
+    return_instruction  = "return", [expression]
     function_call       = identifier, arguments
     arguments           = "(", [expression, {",", expression}], ")"
     

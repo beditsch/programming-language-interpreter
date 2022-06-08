@@ -5,7 +5,6 @@ import interpreter.exception.NoValueReturnedFromFunctionException
 import interpreter.exception.NullLastVisitResultException
 import interpreter.exception.WrongNumberOfFunctionCallArgumentsException
 import interpreter.model.Currency
-import interpreter.model.VisitResult
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.WordSpec
 import io.kotest.data.forAll
@@ -28,12 +27,12 @@ class ValidationHelperTest : WordSpec({
 
         "throw ${MismatchedValueTypeException::class.simpleName} when returned value doesn't match function return type" {
             forAll(
-                row(VariableType(Type.INT), VisitResult(3.0, true)),
-                row(VariableType(Type.FLOAT), VisitResult(1, true)),
-                row(VariableType(Type.BOOL), VisitResult(12, true)),
-                row(VariableType(Type.STRING), VisitResult(true, true)),
-                row(VariableType(Type.CURRENCY, "PLN"), VisitResult(3.0, true)),
-                row(VariableType(Type.CURRENCY, "PLN"), VisitResult(Currency(BigDecimal(1), "EUR"), true)),
+                row(VariableType(Type.INT), 3.0),
+                row(VariableType(Type.FLOAT), 1),
+                row(VariableType(Type.BOOL), 12),
+                row(VariableType(Type.STRING), true),
+                row(VariableType(Type.CURRENCY, "PLN"), 3.0),
+                row(VariableType(Type.CURRENCY, "PLN"), Currency(BigDecimal(1), "EUR")),
             ) {
                     retType, result ->
                 shouldThrow<MismatchedValueTypeException> {
@@ -44,8 +43,8 @@ class ValidationHelperTest : WordSpec({
 
         "throw ${NoValueReturnedFromFunctionException::class.simpleName} when function should return value but didn't" {
             val returnType = VariableType(Type.INT)
-            val visitResult = VisitResult(3.0, false)
-            shouldThrow<NoValueReturnedFromFunctionException> {
+            val visitResult = 3.0
+            shouldThrow<MismatchedValueTypeException> {
                 ValidationHelper.validateFunctionReturnValueType(returnType, visitResult)
             }
         }
@@ -53,7 +52,7 @@ class ValidationHelperTest : WordSpec({
         "throw ${NullLastVisitResultException::class.simpleName} when visitResult is null" {
             val returnType = VariableType(Type.INT)
             val visitResult = null
-            shouldThrow<NullLastVisitResultException> {
+            shouldThrow<NoValueReturnedFromFunctionException> {
                 ValidationHelper.validateFunctionReturnValueType(returnType, visitResult)
             }
         }

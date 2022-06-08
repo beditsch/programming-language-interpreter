@@ -2,7 +2,6 @@ package interpreter.utils
 
 import interpreter.exception.* // ktlint-disable no-wildcard-imports
 import interpreter.model.Currency
-import interpreter.model.VisitResult
 import parser.model.Function
 import parser.model.FunctionCall
 import parser.model.Parameter
@@ -30,22 +29,19 @@ class ValidationHelper {
             }
         }
 
-        fun validateFunctionReturnValueType(funReturnType: VariableType, visitResult: VisitResult?) {
-            visitResult?.let {
-                if (funReturnType.type != Type.VOID && !it.wasValueReturned)
-                    throw NoValueReturnedFromFunctionException(funReturnType.toString())
-            } ?: if (funReturnType.type != Type.VOID) throw NullLastVisitResultException()
+        fun validateFunctionReturnValueType(funReturnType: VariableType, visitResult: Any?) {
+            if (funReturnType.type != Type.VOID && visitResult == null)
+                throw NoValueReturnedFromFunctionException(funReturnType.toString())
 
-            val returnedVal = visitResult?.value
             when (funReturnType.type) {
-                Type.INT -> if (returnedVal !is Int) throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
-                Type.FLOAT -> if (returnedVal !is Double) throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
-                Type.BOOL -> if (returnedVal !is Boolean) throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
-                Type.STRING -> if (returnedVal !is String) throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
-                Type.CURRENCY -> if (returnedVal !is Currency || funReturnType.currencyId != returnedVal.currencyId)
-                    throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
-                Type.VOID -> if (visitResult?.wasValueReturned == true)
-                    throw MismatchedValueTypeException(funReturnType.toString(), returnedVal)
+                Type.INT -> if (visitResult !is Int) throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
+                Type.FLOAT -> if (visitResult !is Double) throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
+                Type.BOOL -> if (visitResult !is Boolean) throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
+                Type.STRING -> if (visitResult !is String) throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
+                Type.CURRENCY -> if (visitResult !is Currency || funReturnType.currencyId != visitResult.currencyId)
+                    throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
+                Type.VOID -> if (visitResult != null)
+                    throw MismatchedValueTypeException(funReturnType.toString(), visitResult)
             }
         }
 
