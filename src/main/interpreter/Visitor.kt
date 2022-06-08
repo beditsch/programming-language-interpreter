@@ -32,8 +32,10 @@ class Visitor(
 
     override fun visitFunctionCall(functionCall: FunctionCall) {
         val function = program.functions[functionCall.identifier]
-            ?: throw MissingFunctionDeclarationException(functionCall.identifier)
-        // TODO("add print function support")
+            ?: if (getBuiltInFunctions().containsKey(functionCall.identifier)) {
+                visitBuiltInFunction(functionCall)
+                return
+            } else throw MissingFunctionDeclarationException(functionCall.identifier)
 
         ValidationHelper.validateNumberOfFunctionCallArguments(function, functionCall)
 
@@ -64,7 +66,7 @@ class Visitor(
         functionCallContext.scopes.add(Scope())
         block.instrAndStatementsList.forEach {
             it.acceptVisitor(this)
-            if (getLastVisitWasValueReturned()) return@forEach
+            if (lastVisitResult?.wasValueReturned == true) return@forEach
         }
         functionCallContext.scopes.removeLast()
     }
@@ -282,6 +284,15 @@ class Visitor(
         lastVisitResult = VisitResult(result)
     }
 
+    private fun visitBuiltInFunction(functionCall: FunctionCall) {
+        val builtInFunctions = getBuiltInFunctions()
+        val functionConstructor = builtInFunctions[functionCall.identifier] ?: throw Exception("TODO")
+        val argumentValues = functionCall.arguments.map { it.acceptVisitor(this); getLastVisitVal() }
+        val function = functionConstructor(argumentValues)
+        val result = function.execute()
+        lastVisitResult = if (result != null) VisitResult(result) else null
+    }
+
     private fun castInt(value: Int, castTo: VariableType): Any {
         return when (castTo.type) {
             Type.INT -> value
@@ -358,5 +369,11 @@ class Visitor(
 
     private fun getLastVisitWasValueReturned(): Boolean {
         return lastVisitResult?.wasValueReturned ?: throw NullLastVisitResultException()
+    }
+
+    private fun getBuiltInFunctions(): Map<String, (List<Any>) -> BuiltInFunction> {
+        return mapOf(
+            "print" to ::PrintFunction
+        )
     }
 }
